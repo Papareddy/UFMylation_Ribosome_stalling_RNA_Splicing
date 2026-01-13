@@ -12,3 +12,9 @@
 
 # Ignore Mac specific files
 .DS_Store
+
+# Ignore backup folders
+Figure4_splicing_analysis_backup/
+
+# Ignore IDE settings
+.vscode/
