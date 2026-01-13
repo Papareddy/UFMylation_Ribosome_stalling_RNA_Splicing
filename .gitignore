@@ -1,0 +1,14 @@
+# Ignore environment folders
+/env/
+/venv/
+/.env/
+.conda/
+
+# Ignore data files
+/data/
+
+# Ignore results files
+/results/
+
+# Ignore Mac specific files
+.DS_Store
