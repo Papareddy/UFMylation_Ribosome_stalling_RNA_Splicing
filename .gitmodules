@@ -1,9 +1,7 @@
-[submodule "Figure4_splicing_analysis"]
-	path = Figure4_splicing_analysis
-	url = https://github.com/Papareddy/Figure4_splicing_analysis.git
+
 [submodule "Figure3_Ribosome_Proteomics_Analysis"]
-	path = Figure3_Ribosome_Proteomics_Analysis
+	path = Part3_Ribosome_Proteomics_Analysis
 	url = https://github.com/Papareddy/Figure3_Ribosome_Proteomics.git
 [submodule "Figure4_Splicing_Analysis"]
-	path = Figure4_Splicing_Analysis
+	path = Part4_Splicing_Analysis
 	url = https://github.com/Papareddy/Figure4_splicing_analysis.git
