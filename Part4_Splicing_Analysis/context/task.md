@@ -1,0 +1,13 @@
+- [x] Clone repository `https://github.com/Papareddy/Figure4_splicing_analysis.git` <!-- id: 0 -->
+- [x] Investigate repository contents <!-- id: 1 -->
+- [x] Report findings to user <!-- id: 2 -->
+- [x] Update `splicing-functional.yml` with dependencies <!-- id: 3 -->
+- [x] Create `src/get_splice_impact_features.R` <!-- id: 4 -->
+- [x] Update `run_pipeline.py` to call R script <!-- id: 5 -->
+- [x] Create `src/analyze_domain_enrichment.py` <!-- id: 6 -->
+- [x] Verify integration <!-- id: 7 -->
+- [x] Perform domain enrichment analysis (Fisher's Exact Test) <!-- id: 8 -->
+- [x] Generate side-by-side volcano plots <!-- id: 9 -->
+- [x] Integrate biophysical feature enrichment (SignalP, TMHMM, NCOILS) <!-- id: 10 -->
+- [x] Run pipeline for Mouse data <!-- id: 11 -->
+- [x] Implement `--direction` support for split analysis <!-- id: 12 -->

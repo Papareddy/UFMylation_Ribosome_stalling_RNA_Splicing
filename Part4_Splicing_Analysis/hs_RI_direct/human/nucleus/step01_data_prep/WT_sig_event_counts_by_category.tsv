@@ -1,0 +1,6 @@
+EventType	n_WT_sig	n_preserved_ufm1	n_lost_ufm1	n_not_covered_ufm1	check_sum
+A3SS	663	134	526	3	663
+A5SS	505	116	386	3	505
+MXE	600	81	518	1	600
+RI	959	349	610	0	959
+SE	1413	218	1185	10	1413

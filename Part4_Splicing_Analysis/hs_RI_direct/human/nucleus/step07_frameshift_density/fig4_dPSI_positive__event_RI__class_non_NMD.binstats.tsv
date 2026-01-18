@@ -1,0 +1,2 @@
+class	label	comparison	n_UFM1_dependent_dPSI_positive	n_UFM1_independent_dPSI_positive	median_UFM1_dependent_dPSI_positive	median_UFM1_independent_dPSI_positive	delta_median	L1_bin_distance	perm_pvalue_L1	star
+Frameshift_no_NMD	non_NMD	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	7	1	0.3823953823953824	0.8307426597582038	-0.44834727736282143	2.0	0.3706293706293706	ns

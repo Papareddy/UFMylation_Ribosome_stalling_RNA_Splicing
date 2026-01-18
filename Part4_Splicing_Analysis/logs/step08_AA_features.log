@@ -1,0 +1,75 @@
+[INFO] Building BED from coordinates TSV (lost): hs_RI_direct/human/nucleus/step01_data_prep/UFM1_dependent.tsv
+[INFO] Filtering lost TSV by EventType: SE
+[INFO] Direction split ON: keeping dPSI_num.WT > 0 (lost)
+[INFO] lost coordinate rows: 0 (BED lines)
+[INFO] bedtools found; extracting strand-aware FASTA… (lost)
+[OK] Wrote nucleotide FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.nt.fa
+[INFO] Translating NT FASTA -> best-ORF AA FASTA (3-frame)… (lost)
+[OK] Wrote AA best-ORF FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.bestORF.aa.fa
+[INFO] Deduplicating AA FASTA… (lost)
+[OK] Wrote AA deduplicated FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.bestORF.aa.dedup.fa
+[DONE] lost outputs:
+  BED      : hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.coords.bed
+  META     : hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.meta.tsv
+  NT FASTA : hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.nt.fa
+  AA bestORF: hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.bestORF.aa.fa
+  AA dedup : hs_RI_direct/human/nucleus/step08_aa_features/lost.favored.bestORF.aa.dedup.fa
+[INFO] Building BED from coordinates TSV (lost): hs_RI_direct/human/nucleus/step01_data_prep/UFM1_dependent.tsv
+[INFO] Filtering lost TSV by EventType: SE
+[INFO] Direction split ON: keeping dPSI_num.WT < 0 (lost)
+[INFO] lost coordinate rows: 0 (BED lines)
+[INFO] bedtools found; extracting strand-aware FASTA… (lost)
+[OK] Wrote nucleotide FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.nt.fa
+[INFO] Translating NT FASTA -> best-ORF AA FASTA (3-frame)… (lost)
+[OK] Wrote AA best-ORF FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.bestORF.aa.fa
+[INFO] Deduplicating AA FASTA… (lost)
+[OK] Wrote AA deduplicated FASTA: hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.bestORF.aa.dedup.fa
+[DONE] lost outputs:
+  BED      : hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.coords.bed
+  META     : hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.meta.tsv
+  NT FASTA : hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.nt.fa
+  AA bestORF: hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.bestORF.aa.fa
+  AA dedup : hs_RI_direct/human/nucleus/step08_aa_features/lost.unfavoured.bestORF.aa.dedup.fa
+[INFO] Building BED from coordinates TSV (preserved): hs_RI_direct/human/nucleus/step01_data_prep/UFM1_independent.tsv
+[INFO] Filtering preserved TSV by EventType: SE
+[INFO] Direction split ON: keeping dPSI_num.WT > 0 (preserved)
+[INFO] preserved coordinate rows: 0 (BED lines)
+[INFO] bedtools found; extracting strand-aware FASTA… (preserved)
+[OK] Wrote nucleotide FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.nt.fa
+[INFO] Translating NT FASTA -> best-ORF AA FASTA (3-frame)… (preserved)
+[OK] Wrote AA best-ORF FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.bestORF.aa.fa
+[INFO] Deduplicating AA FASTA… (preserved)
+[OK] Wrote AA deduplicated FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.bestORF.aa.dedup.fa
+[DONE] preserved outputs:
+  BED      : hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.coords.bed
+  META     : hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.meta.tsv
+  NT FASTA : hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.nt.fa
+  AA bestORF: hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.bestORF.aa.fa
+  AA dedup : hs_RI_direct/human/nucleus/step08_aa_features/preserved.favored.bestORF.aa.dedup.fa
+[INFO] Building BED from coordinates TSV (preserved): hs_RI_direct/human/nucleus/step01_data_prep/UFM1_independent.tsv
+[INFO] Filtering preserved TSV by EventType: SE
+[INFO] Direction split ON: keeping dPSI_num.WT < 0 (preserved)
+[INFO] preserved coordinate rows: 0 (BED lines)
+[INFO] bedtools found; extracting strand-aware FASTA… (preserved)
+[OK] Wrote nucleotide FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.nt.fa
+[INFO] Translating NT FASTA -> best-ORF AA FASTA (3-frame)… (preserved)
+[OK] Wrote AA best-ORF FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.bestORF.aa.fa
+[INFO] Deduplicating AA FASTA… (preserved)
+[OK] Wrote AA deduplicated FASTA: hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.bestORF.aa.dedup.fa
+[DONE] preserved outputs:
+  BED      : hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.coords.bed
+  META     : hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.meta.tsv
+  NT FASTA : hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.nt.fa
+  AA bestORF: hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.bestORF.aa.fa
+  AA dedup : hs_RI_direct/human/nucleus/step08_aa_features/preserved.unfavoured.bestORF.aa.dedup.fa
+[OK] Using cached background exon NT FASTA: data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.nt.fa
+[OK] Using cached background exon AA FASTA: data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.bestORF.aa.fa
+[OK] Using cached background exon AA dedup FASTA: data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.bestORF.aa.dedup.fa
+[DONE] Background exon AA cache ready.
+  BG AA  : data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.bestORF.aa.fa
+  BG AA dedup: data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.bestORF.aa.dedup.fa
+[DONE] Background exon cache ready.
+  BG BED : data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.bed
+  BG NT  : data/cache/bg_exons/bgexons__Homo_sapiens.GRCh38.dna.primary_assembly.fa_3151425851__pcg_gencode.v45.annotation.gtf.gz_44435218.exons.nt.fa
+[DONE] Finished coordinate extraction for lost + preserved.
+[DONE] Background exon cache dir: data/cache/bg_exons

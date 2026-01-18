@@ -1,0 +1,17 @@
+[INFO] Loaded 0 SE events and 959 RI events.
+[DEBUG] Sample RI Row:
+ID...1.WT                                          6
+GeneID                            ENSG00000102125.17
+geneSymbol                                  TAFAZZIN
+chr.WT                                          chrX
+strand.WT                                          +
+                                         ...        
+exonStart_0base.UFM                              NaN
+exonEnd.UFM                                      NaN
+upstream_to_target_count.UFM                     NaN
+target_to_downstream_count.UFM                   NaN
+target_count.UFM                                 NaN
+Name: 0, Length: 116, dtype: object
+[DEBUG] Parsed RI Coords: ('chrX', '+', 154412214, 154413206, np.float64(0.166))
+[INFO] Found 0 overlapping SE-RI pairs. Saved to hs_RI_direct/human/nucleus/step11_mechanism_investigation/adjacency/SE_RI_Adjacency.tsv
+[WARN] No adjacency found. Exiting.

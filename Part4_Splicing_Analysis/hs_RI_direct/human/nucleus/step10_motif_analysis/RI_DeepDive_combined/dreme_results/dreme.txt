@@ -1,0 +1,36 @@
+# DREME 5.5.9
+#     command: dreme -p hs_RI_direct/human/nucleus/step10_motif_analysis/RI_DeepDive_combined/lost.intron.fa -n hs_RI_direct/human/nucleus/step10_motif_analysis/RI_DeepDive_combined/preserved.intron.fa -oc hs_RI_direct/human/nucleus/step10_motif_analysis/RI_DeepDive_combined/dreme_results -dna
+#   positives: 610 from hs_RI_direct/human/nucleus/step10_motif_analysis/RI_DeepDive_combined/lost.intron.fa (Sun Jan 18 16:20:56 CET 2026)
+#   negatives: 349 from hs_RI_direct/human/nucleus/step10_motif_analysis/RI_DeepDive_combined/preserved.intron.fa (Sun Jan 18 16:20:56 CET 2026)
+#        host: Ranjiths-iMac.local
+#        when: Sun Jan 18 16:20:57 CET 2026
+
+MEME version 5.5.9
+
+ALPHABET "DNA" DNA-LIKE
+A "Adenine" CC0000 ~ T "Thymine" 008000
+C "Cytosine" 0000CC ~ G "Guanine" FFB300
+N "Any base" = ACGT
+X = ACGT
+. = ACGT
+V "Not T" = ACG
+H "Not G" = ACT
+D "Not C" = AGT
+B "Not A" = CGT
+M "Amino" = AC
+R "Purine" = AG
+W "Weak" = AT
+S "Strong" = CG
+Y "Pyrimidine" = CT
+K "Keto" = GT
+U = T
+END ALPHABET
+
+strands: + -
+
+Background letter frequencies (from dataset):
+A 0.246 C 0.225 G 0.237 T 0.292
+
+
+# Stopping reason: E-value threshold exceeded
+#    Running time: 2.91 seconds

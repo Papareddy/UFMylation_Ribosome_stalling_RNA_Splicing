@@ -1,0 +1,6 @@
+Group                | PolyBasic(%) | PolyPro(%)  
+--------------------------------------------------
+UFM1_dependent       | 10.65        | 11.52       
+UFM1_independent     | 6.83         | 8.43        
+[STATS] UFM1_dependent vs UFM1_independent: P=1.05e-01 (OR=1.63)
+[DONE] Saved comparison to hs_RI_direct/human/nucleus/step11_mechanism_investigation/RI_dPSI_positive

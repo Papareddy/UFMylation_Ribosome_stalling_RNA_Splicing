@@ -1,0 +1,72 @@
+name: splicing-functional
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - pip
+
+  # Core scientific stack
+  - pandas>=2.0
+  - numpy>=1.24
+  - scipy>=1.10
+  - statsmodels
+  - scikit-learn
+
+  # Python Plotting
+  - matplotlib
+  - seaborn
+
+  # Bioinformatics (Binaries & Python API)
+  - samtools           # Explicitly add samtools binary
+  - bedtools           # Standalone binary (Required by pybedtools)
+  - biopython>=1.83
+  - pybedtools
+  - pysam
+  - intervaltree
+  - bx-python
+  - gffutils
+  - pyfaidx
+
+  # R Language and Base Stats
+  - r-base>=4.3
+  - r-essentials
+
+  # R Libraries (Requested & Visualization Betters)
+  - r-tidyverse      
+  - r-gprofiler2     
+  - r-viridis        
+  - r-beeswarm       
+  - r-ggbeeswarm     
+  - r-ggpubr         
+  - r-rcolorbrewer   
+  - r-cowplot        
+  - r-patchwork      
+  - bioconductor-genomicranges
+  - bioconductor-genomicfeatures
+  - bioconductor-annotationhub
+  - bioconductor-ensembldb
+  - bioconductor-variantannotation
+  - bioconductor-biomart   # usually correct
+  - bioconductor-pfam.db   # usually correct
+  - bioconductor-pwalign
+  - bioconductor-txdbmaker
+  - r-complexupset
+  - r-digest         # Added for content-aware caching
+  - r-devtools
+
+  # Statistics / enrichment (Python)
+  - pip:
+    - goatools
+    - mygene
+    - gprofiler-official
+    - adjustText
+
+  # Utilities
+  - requests
+  - tqdm
+  - pyyaml
+  - joblib
+  - rich
+  - click
+  - ipython

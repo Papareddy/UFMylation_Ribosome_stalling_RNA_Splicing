@@ -1,0 +1,5 @@
+dataset	n_events	frac_identical	frac_different
+UFM1_dependent_dPSI_positive	67	0.0	1.0
+UFM1_dependent_dPSI_negative	15	0.0	1.0
+UFM1_independent_dPSI_positive	34	0.0	1.0
+UFM1_independent_dPSI_negative	9	0.0	1.0

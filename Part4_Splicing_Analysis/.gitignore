@@ -1,0 +1,22 @@
+# Ignore environment folders
+/env/
+/venv/
+/.env/
+.conda/
+
+# Ignore results files
+/results/
+
+# Ignore large FASTA files and cache in the data directory
+/data/**/*.fa
+/data/**/*.fa.fai
+/data/**/*.dna.primary_assembly.fa*
+/data/cache/
+
+# Ignore Mac specific files
+.DS_Store
+
+# Exclude Data and Results
+/data/
+/results/
+*.meme

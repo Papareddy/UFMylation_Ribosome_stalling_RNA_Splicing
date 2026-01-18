@@ -1,0 +1,6 @@
+class	label	comparison	bin_index	bin_start	bin_end	bin_center	n_UFM1_dependent_dPSI_negative_in_bin	n_UFM1_dependent_dPSI_negative_out_bin	n_UFM1_independent_dPSI_negative_in_bin	n_UFM1_independent_dPSI_negative_out_bin	odds_ratio_UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	p_value	q_value	star	enriched_dataset
+CDS_neutral	CDS_neutral	UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	1	0.0	0.2	0.1	13	57	7	43	1.4010025062656641	0.6221209010796434	0.7776511263495542	ns	UFM1_dependent_dPSI_negative
+CDS_neutral	CDS_neutral	UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	2	0.2	0.4	0.30000000000000004	16	54	11	39	1.0505050505050506	1.0	1.0	ns	UFM1_dependent_dPSI_negative
+CDS_neutral	CDS_neutral	UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	3	0.4	0.6000000000000001	0.5	14	56	15	35	0.5833333333333334	0.27954078227484724	0.6988519556871181	ns	UFM1_independent_dPSI_negative
+CDS_neutral	CDS_neutral	UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	4	0.6000000000000001	0.8	0.7000000000000001	19	51	8	42	1.9558823529411764	0.18588641157283015	0.6988519556871181	ns	UFM1_dependent_dPSI_negative
+CDS_neutral	CDS_neutral	UFM1_dependent_dPSI_negative_vs_UFM1_independent_dPSI_negative	5	0.8	1.0	0.9	8	62	9	41	0.5878136200716846	0.42646040928490603	0.7107673488081767	ns	UFM1_independent_dPSI_negative

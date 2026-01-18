@@ -1,0 +1,6 @@
+class	label	comparison	bin_index	bin_start	bin_end	bin_center	n_UFM1_dependent_dPSI_positive_in_bin	n_UFM1_dependent_dPSI_positive_out_bin	n_UFM1_independent_dPSI_positive_in_bin	n_UFM1_independent_dPSI_positive_out_bin	odds_ratio_UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	p_value	q_value	star	enriched_dataset
+Frameshift_NMD_likely	NMD_likely	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	1	0.0	0.2	0.1	0	5	1	2	0.0	0.37499999999999983	1.0	ns	UFM1_independent_dPSI_positive
+Frameshift_NMD_likely	NMD_likely	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	2	0.2	0.4	0.30000000000000004	2	3	0	3	inf	0.4642857142857143	1.0	ns	NA
+Frameshift_NMD_likely	NMD_likely	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	3	0.4	0.6000000000000001	0.5	0	5	0	3		1.0	1.0	ns	NA
+Frameshift_NMD_likely	NMD_likely	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	4	0.6000000000000001	0.8	0.7000000000000001	2	3	1	2	1.3333333333333333	1.0	1.0	ns	UFM1_dependent_dPSI_positive
+Frameshift_NMD_likely	NMD_likely	UFM1_dependent_dPSI_positive_vs_UFM1_independent_dPSI_positive	5	0.8	1.0	0.9	1	4	1	2	0.5	1.0	1.0	ns	UFM1_independent_dPSI_positive
