@@ -616,47 +616,6 @@ def main():
                         "--outdir", adj_out]
              _run_and_log(cmd_11b, "step11_b_adjacency")
 
-    # Step 12: Arabidopsis Specific Analysis
-    if should_run(12):
-        if args.species == 'arabidopsis':
-            print("[INFO] === Step 12: Arabidopsis Microsome Enrichment ===")
-            
-            # Find the raw counts directory - assumed to be in data/arabidopsis/GSE82041_RAW or similar
-            # Since the R script has defaults, we can override inputs.
-            # RMATS_OUT_DIR is step1_out
-            
-            # The base_dir (Raw Counts) isn't explicitly passed to run_pipeline.py, 
-            # but we know it's likely adjacent to the other data.
-            # We will use the script's default or try to detect it? 
-            # The script defaults to data/arabidopsis/GSE82041_RAW/ based on our recent update.
-            # We should pass rmats_out_dir and outdir explicitly to match the pipeline's structure.
-            
-            ar_outdir = os.path.join(run_outdir, "step12_microsome_enrichment")
-            
-            # Run for RI
-            if "RI" in args.event_types:
-                print(f"[INFO] Running Arabidopsis Microsome Enrichment for RI...")
-                cmd_ar_ri = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                             os.path.join(script_dir, "src/Arabidopsis_microsome_enrichment.R"),
-                             f"--rmats_out_dir={step1_out}",
-                             f"--outdir={ar_outdir}",
-                             f"--event_group=RI"]
-                _run_and_log(cmd_ar_ri, "step12_microsome_RI")
-
-            # Run for Others (SE/MXE/etc) if any present
-            other_events = set(args.event_types) - {"RI"}
-            if other_events:
-                print(f"[INFO] Running Arabidopsis Microsome Enrichment for Others ({','.join(other_events)})...")
-                cmd_ar_others = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                                 os.path.join(script_dir, "src/Arabidopsis_microsome_enrichment.R"),
-                                 f"--rmats_out_dir={step1_out}",
-                                 f"--outdir={ar_outdir}",
-                                 f"--event_group=Others"]
-                _run_and_log(cmd_ar_others, "step12_microsome_Others")
-        else:
-             # Just a debug note, or skip silently
-             pass
-        
     print("\n" + "="*60)
     print("       PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60 + "\n")

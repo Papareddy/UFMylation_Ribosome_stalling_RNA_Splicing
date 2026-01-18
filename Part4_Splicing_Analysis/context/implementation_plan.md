@@ -1,57 +1,38 @@
-# Biophysical Feature Enrichment (SignalP, TMHMM, NCOILS)
+# Implementation Plan - Arabidopsis Microsome Enrichment Fix
 
-## Goal
-Calculate and visualize the enrichment of specific biophysical features (Signal Peptides, Transmembrane Helices, Coiled-Coils) in splicing events.
+## User Review Required
+> [!IMPORTANT]
+> I will modify `src/Arabidopsis_microsome_enrichment.R` to **always** run analysis for both "RI" and "Others" (SE/MXE/etc) groups, regardless of command line flags. This ensures both plots are generated consistently.
+> I will also update `run_pipeline.py` to call this script once, simplifying the pipeline.
 
 ## Proposed Changes
 
-### R Script
-#### [MODIFY] [src/get_splice_impact_features.R](file:///Users/ranjith.papareddy/.gemini/antigravity/scratch/Figure4_splicing_analysis/src/get_splice_impact_features.R)
-- **Data Fetching**: Update `biomaRt` query to include `signalp`, `tmhmm`, `ncoils`.
-- **Processing**:
-    -   Create binary flags for each gene: `HasSignalP`, `HasTMHMM`, `HasNCOILS` (TRUE if attribute is non-empty).
-- **Statistics**:
-    -   Perform Fisher's Exact Test for each feature:
-        1.  **Lost vs Genome**
-        2.  **Preserved vs Genome**
-        3.  **Lost vs Preserved** (Direct comparison)
-- **Output**: Save `biophysical_enrichment.tsv`.
+### [Arabidopsis Script]
+#### [MODIFY] [src/Arabidopsis_microsome_enrichment.R](file:///Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/Part4_Splicing_Analysis/src/Arabidopsis_microsome_enrichment.R)
+-   Remove `event_group` argument dependency for controlling flow.
+-   Implement a loop/list strategy to process:
+    1.  **RI**: `EventType == "RI"`
+    2.  **Others**: `EventType %in% c("SE", "MXE", "A3SS", "A5SS")`
+-   For each group:
+    -   Filter `genes_preserved` and `genes_lost`.
+    -   Generate specific PDF output (`microsome_enrichment_RI.pdf`, `microsome_enrichment_Others.pdf`).
 
-### Python Script
-#### [MODIFY] [src/analyze_domain_enrichment.py](file:///Users/ranjith.papareddy/.gemini/antigravity/scratch/Figure4_splicing_analysis/src/analyze_domain_enrichment.py)
-- **Input**: Read `biophysical_enrichment.tsv`.
-- **Visualization**:
-    -   Generate a Grouped Bar Chart (`Biophysical_Enrichment.png`).
-    -   Y-axis: Odds Ratio (Log2 scale?).
-    -   Groups: SignalP, TMHMM, NCOILS.
-    -   Bars: Lost vs Genome, Preserved vs Genome.
-    -   Annotate with significance stars.
+### [Pipeline Runner]
+#### [MODIFY] [run_pipeline.py](file:///Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/Part4_Splicing_Analysis/run_pipeline.py)
+-   Steps 19-20 (logic for Step 12):
+    -   Replace the double call (RI vs Others) with a single call to `src/Arabidopsis_microsome_enrichment.R`.
+    -   Remove `--event_group` flag passing (or keep it as dummy if needed, but script will ignore it for selection).
 
-## Directionality Support (New Request)
+## Verification Plan
 
-### Goal
-Enable `--direction` flag to split analyses by splicing direction (dPSI > 0 vs dPSI < 0).
+### Automated Tests
+-   Run Step 12 via `run_pipeline.py`:
+    ```bash
+    mamba run -n splicing-functional python3 run_pipeline.py --species arabidopsis --fraction nucleus --steps 12
+    ```
+-   Check output directory `results/arabidopsis/nucleus/step12_microsome_enrichment/` for existence of:
+    -   `microsome_enrichment_RI.pdf`
+    -   `microsome_enrichment_Others.pdf`
 
-### R Script
-#### [MODIFY] [src/get_splice_impact_features.R](file:///Users/ranjith.papareddy/.gemini/antigravity/scratch/Figure4_splicing_analysis/src/get_splice_impact_features.R)
--   Accept `--direction` flag.
--   If enabled:
-    -   Split `Lost` into `Lost_Inc` (dPSI > 0) and `Lost_Exc` (dPSI < 0).
-    -   Split `Preserved` into `Preserved_Inc` (dPSI > 0) and `Preserved_Exc` (dPSI < 0).
-    -   Calculate enrichment for all 4 subgroups (plus distinct comparisons if needed, e.g. Lost_Inc vs Genome).
--   Update `domain_enrichment.tsv` and `biophysical_enrichment.tsv` to use these new set names (or add a direction column).
-
-### Python Script
-#### [MODIFY] [src/analyze_domain_enrichment.py](file:///Users/ranjith.papareddy/.gemini/antigravity/scratch/Figure4_splicing_analysis/src/analyze_domain_enrichment.py)
--   Handle 4 sets (`Lost_Inc`, `Lost_Exc`, `Preserved_Inc`, `Preserved_Exc`) instead of 2.
--   **Volcano Plot**: Can we fit 4 on one plot? Or maybe 2 separate plots (Inclusion vs Low)?
-    -   Proposed: Keep side-by-side, but maybe split into 4 facets or 2 rows if direction is on.
-    -   Or just color code? Faceting (2x2 or 1x4) is safer.
--   **Biophysical Plot**: Grouped bar chart with 4 groups instead of 2.
-
-### Pipeline
-#### [MODIFY] [run_pipeline.py](file:///Users/ranjith.papareddy/.gemini/antigravity/scratch/Figure4_splicing_analysis/run_pipeline.py)
--   Pass `--direction` to `run_splice_impact`.
-
-## Verification
--   Run with `--direction` and check output plots.
+### Manual Verification
+-   Inspect the logs to ensure "Event Type(s): RI" and "Event Type(s): Others" sections appear and report correct gene counts (expected ~27/100 for RI, 1/5 for Others based on current data).
