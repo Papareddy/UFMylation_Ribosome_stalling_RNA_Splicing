@@ -30,8 +30,9 @@ WT_DIR   <- cli_args$wt_dir   %||% stop("Missing --wt_dir")
 UFM_DIR  <- cli_args$ufm_dir  %||% stop("Missing --ufm_dir")
 OUTDIR   <- cli_args$outdir   %||% "results/step0"
 FDR_CUT  <- as.numeric(cli_args$fdr %||% 0.05)
-DPSI_CUT <- as.numeric(cli_args$dpsi %||% 0.15)
-MIN_READS <- as.numeric(cli_args$min_reads %||% 20)
+MIN_READS <- as.numeric(cli_args$min_reads %||% 50)
+
+# UPDATED: Use JCEC for everything as requested
 WHICH <- "JCEC"
 
 dir.create(OUTDIR, showWarnings = FALSE, recursive = TRUE)
@@ -50,7 +51,6 @@ if (!is.null(cli_args$event_types)) {
 }
 
 # Always read ALL event types so the summary plot covers everything
-# We will filter for the output files (lost/preserved.tsv) later.
 proc_event_types <- all_event_types
 
 # --- Helpers ---
@@ -91,15 +91,23 @@ read_mats <- function(dir, ev, which = "JC") {
   df$dPSI_num <- suppressWarnings(as.numeric(df$IncLevelDifference))
   df$mean_psi_ctrl <- vapply(df$IncLevel1, mean_from_vec, numeric(1))
   df$mean_psi_case <- vapply(df$IncLevel2, mean_from_vec, numeric(1))
+  
   needed_counts <- c("IJC_SAMPLE_1","SJC_SAMPLE_1","IJC_SAMPLE_2","SJC_SAMPLE_2")
   if (all(needed_counts %in% names(df))) {
-    df$total_reads <- rowSums(cbind(
-      vapply(df$IJC_SAMPLE_1, sum_from_vec, numeric(1)),
-      vapply(df$SJC_SAMPLE_1, sum_from_vec, numeric(1)),
-      vapply(df$IJC_SAMPLE_2, sum_from_vec, numeric(1)),
-      vapply(df$SJC_SAMPLE_2, sum_from_vec, numeric(1))
-    ), na.rm=TRUE)
+    # UPDATED LOGIC: Calculate reads PER CONDITION
+    # Condition 1 Total = Sum(IJC Replicates) + Sum(SJC Replicates) for Sample 1
+    df$reads_cond1 <- vapply(df$IJC_SAMPLE_1, sum_from_vec, numeric(1)) + 
+                      vapply(df$SJC_SAMPLE_1, sum_from_vec, numeric(1))
+    
+    # Condition 2 Total = Sum(IJC Replicates) + Sum(SJC Replicates) for Sample 2
+    df$reads_cond2 <- vapply(df$IJC_SAMPLE_2, sum_from_vec, numeric(1)) + 
+                      vapply(df$SJC_SAMPLE_2, sum_from_vec, numeric(1))
+    
+    # Keep total for completeness, though we filter on cond1/cond2 now
+    df$total_reads <- df$reads_cond1 + df$reads_cond2
   } else {
+    df$reads_cond1 <- NA_real_
+    df$reads_cond2 <- NA_real_
     df$total_reads <- NA_real_
   }
   df[!is.na(df$FDR_num) & df$FDR_num >= 0 & df$FDR_num <= 1, , drop = FALSE]
@@ -110,6 +118,7 @@ read_all_event_types <- function(event_types, fun, ...) {
 }
 
 # --- Main Logic ---
+# Note: which is passed as WHICH (defined as "JCEC" above)
 wt_mats  <- read_all_event_types(proc_event_types, read_mats, WT_DIR, which = WHICH)
 ufm_mats <- read_all_event_types(proc_event_types, read_mats, UFM_DIR, which = WHICH)
 
@@ -119,22 +128,32 @@ merged_fixed <- dplyr::inner_join(
   suffix = c(".WT", ".UFM")
 )
 
+# UPDATED: Filter using Condition-Specific coverage and dPSI logic
 wt_sig_events <- merged_fixed %>%
   dplyr::filter(
-    !is.na(total_reads.WT), total_reads.WT >= MIN_READS,
+    # Check Coverage for WT: Both Cond1 and Cond2 must be >= MIN_READS
+    !is.na(reads_cond1.WT), reads_cond1.WT >= MIN_READS,
+    !is.na(reads_cond2.WT), reads_cond2.WT >= MIN_READS,
+    
+    # Check Significance
     FDR_num.WT < FDR_CUT,
+    
+    # Check dPSI Thresholds (0.2 for SE, 0.1 for others)
     ifelse(EventType == "SE", abs(dPSI_num.WT) >= 0.2, abs(dPSI_num.WT) >= 0.1)
   )
 
 wt_sig_covered <- wt_sig_events %>%
   dplyr::filter(
     !is.na(FDR_num.UFM), !is.na(dPSI_num.UFM),
-    !is.na(total_reads.UFM), total_reads.UFM >= MIN_READS
+    # Check Coverage for UFM: Both Cond1 and Cond2 must be >= MIN_READS
+    !is.na(reads_cond1.UFM), reads_cond1.UFM >= MIN_READS,
+    !is.na(reads_cond2.UFM), reads_cond2.UFM >= MIN_READS
   )
 
 wt_sig_preserved_ufm1 <- wt_sig_covered %>%
   dplyr::filter(
     FDR_num.UFM < FDR_CUT, 
+    # Same dPSI logic for preservation
     ifelse(EventType == "SE", abs(dPSI_num.UFM) >= 0.2, abs(dPSI_num.UFM) >= 0.1)
   )
 
@@ -144,20 +163,20 @@ wt_sig_lost_in_ufm1 <- wt_sig_covered %>%
   )
   
 wt_sig_notcovered_ufm1 <- wt_sig_events %>%
-  dplyr::filter(is.na(FDR_num.UFM) | is.na(dPSI_num.UFM) | is.na(total_reads.UFM) | total_reads.UFM < MIN_READS)
+  dplyr::filter(
+    is.na(FDR_num.UFM) | is.na(dPSI_num.UFM) | 
+    is.na(reads_cond1.UFM) | reads_cond1.UFM < MIN_READS |
+    is.na(reads_cond2.UFM) | reads_cond2.UFM < MIN_READS
+  )
 
 # --- Write Output (Filtered by requested event_types) ---
-# Filter only for writing to files, so downstream steps only process what was requested.
 out_preserved <- wt_sig_preserved_ufm1 %>% dplyr::filter(EventType %in% target_event_types)
 out_lost      <- wt_sig_lost_in_ufm1      %>% dplyr::filter(EventType %in% target_event_types)
 
 readr::write_tsv(out_preserved, file.path(OUTDIR, "UFM1_independent.tsv"))
 readr::write_tsv(out_lost,      file.path(OUTDIR, "UFM1_dependent.tsv"))
 
-# Split by Direction (dPSI > 0 vs dPSI < 0) for directional motif analysis
-# Positive: WT dPSI > 0 (Inclusion Enhanced in WT vs Control) -> dPSI_positive
-# Negative: WT dPSI < 0 (Inclusion Silenced in WT vs Control) -> dPSI_negative
-
+# Split by Direction
 out_UFM1_independent_pos <- out_preserved %>% dplyr::filter(dPSI_num.WT > 0)
 out_UFM1_independent_neg <- out_preserved %>% dplyr::filter(dPSI_num.WT < 0)
 out_UFM1_dependent_pos   <- out_lost      %>% dplyr::filter(dPSI_num.WT > 0)

@@ -11,3 +11,4 @@
 - [x] Integrate biophysical feature enrichment (SignalP, TMHMM, NCOILS) <!-- id: 10 -->
 - [x] Run pipeline for Mouse data <!-- id: 11 -->
 - [x] Implement `--direction` support for split analysis <!-- id: 12 -->
+- [x] Implement Arabidopsis Microsome Enrichment Analysis (Step 12) <!-- id: 13 -->

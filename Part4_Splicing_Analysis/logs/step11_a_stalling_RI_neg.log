@@ -1,6 +1,0 @@
-Group                | PolyBasic(%) | PolyPro(%)  
---------------------------------------------------
-Lost                 | 16.67        | 8.67        
-Preserved            | 24.00        | 13.00       
-[STATS] Lost vs Preserved: P=1.93e-01 (OR=0.63)
-[DONE] Saved comparison to hs_RI_direct/human/nucleus/step11_mechanism_investigation/RI_neg

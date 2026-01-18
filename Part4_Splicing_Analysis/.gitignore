@@ -20,3 +20,8 @@
 /data/
 /results/
 *.meme
+# Ignore logs
+logs/
+
+# Ignore artifacts
+hs_RI_direct/
