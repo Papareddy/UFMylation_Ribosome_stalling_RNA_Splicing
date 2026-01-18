@@ -196,6 +196,29 @@ def main():
             except: print("[WARN] AME UFM1_independent failed.")
     elif args.motif_db:
         print(f"[WARN] Motif DB not found at {args.motif_db}. Skipping AME.")
+        
+    # --- 5C: Visual Comparison (Red/Blue Scatter) ---
+    # Only run if both AME runs succeeded and produced output
+    if os.path.exists(args.lost_fa) and os.path.exists(args.preserved_fa) and args.motif_db:
+         out_ame_l = os.path.join(args.outdir, "ame_UFM1_dependent_vs_constitutive")
+         out_ame_p = os.path.join(args.outdir, "ame_UFM1_independent_vs_constitutive")
+         
+         tsv_l = os.path.join(out_ame_l, "ame.tsv")
+         tsv_p = os.path.join(out_ame_p, "ame.tsv")
+         
+         if os.path.exists(tsv_l) and os.path.exists(tsv_p):
+             print("[INFO] Generating Motif Comparison Scatter Plot (R)...")
+             plot_r_script = os.path.join(args.script_dir, "plot_ame_comparison.R")
+             
+             if os.path.exists(plot_r_script):
+                 plot_pdf = os.path.join(args.outdir, "motif_enrichment_comparison.pdf")
+                 cmd_plot_r = f"Rscript {plot_r_script} --dep={tsv_l} --indep={tsv_p} --out={plot_pdf}"
+                 try:
+                     run_cmd(cmd_plot_r, "Plotting Motif Comparison")
+                 except:
+                     print("[WARN] R Motif Plotting failed.")
+             else:
+                 print(f"[WARN] Plotting script not found: {plot_r_script}")
 
 
 # ... (Imports) ...
