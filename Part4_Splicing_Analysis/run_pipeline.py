@@ -90,7 +90,12 @@ def main():
     # --- File Detection & Setup ---
     data_dir = os.path.join(script_dir, "data", args.species)
     # Input Directories
-    if args.fraction:
+    # Input Directories
+    if args.species == 'mouse':
+        print("[INFO] Species is Mouse: Hardwiring fraction to 'total'")
+        fraction = "total"
+        frac_dir = os.path.join(data_dir, fraction)
+    elif args.fraction:
         fraction = args.fraction
         frac_dir = os.path.join(data_dir, fraction)
     else:
