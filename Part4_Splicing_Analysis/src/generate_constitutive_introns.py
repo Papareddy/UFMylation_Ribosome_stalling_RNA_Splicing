@@ -169,6 +169,8 @@ def main():
     bed_intron = open(f"{base_out}.intron.bed", "w")
     bed_5ss = open(f"{base_out}.5ss.bed", "w")
     bed_3ss = open(f"{base_out}.3ss.bed", "w")
+    bed_5ss_wide = open(f"{base_out}.5ss_wide.bed", "w")
+    bed_3ss_wide = open(f"{base_out}.3ss_wide.bed", "w")
     
     for idx, (chrom, start, end, strand, tid) in enumerate(sampled):
         name = f"Const_{idx}_{tid}"
@@ -182,18 +184,34 @@ def main():
             d5_s, d5_e = start - 3, start + 6
             # 3'SS: [end-20, end+3]
             d3_s, d3_e = end - 20, end + 3
+            
+            # Wide (+/- 50bp around splice site)
+            # 5'SS (Donor) at start.
+            d5_w_s, d5_w_e = start - 50, start + 50
+            # 3'SS (Acceptor) at end.
+            d3_w_s, d3_w_e = end - 50, end + 50
         else:
             # 5'SS (Donor) at 'end': [end-6, end+3]
             d5_s, d5_e = end - 6, end + 3
             # 3'SS (Acceptor) at 'start': [start-3, start+20]
             d3_s, d3_e = start - 3, start + 20
             
+            # Wide
+            # 5'SS (Donor) at end.
+            d5_w_s, d5_w_e = end - 50, end + 50
+            # 3'SS (Acceptor) at start.
+            d3_w_s, d3_w_e = start - 50, start + 50
+            
         bed_5ss.write(f"{chrom}\t{d5_s}\t{d5_e}\t{name}\t0\t{strand}\n")
         bed_3ss.write(f"{chrom}\t{d3_s}\t{d3_e}\t{name}\t0\t{strand}\n")
+        bed_5ss_wide.write(f"{chrom}\t{d5_w_s}\t{d5_w_e}\t{name}\t0\t{strand}\n")
+        bed_3ss_wide.write(f"{chrom}\t{d3_w_s}\t{d3_w_e}\t{name}\t0\t{strand}\n")
         
     bed_intron.close()
     bed_5ss.close()
     bed_3ss.close()
+    bed_5ss_wide.close()
+    bed_3ss_wide.close()
 
 if __name__ == "__main__":
     main()

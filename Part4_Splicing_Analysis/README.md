@@ -31,12 +31,16 @@ The pipeline is orchestrated by `run_pipeline.py` and executes the following ana
     -   Translates sequences to amino acids, identifying the best Open Reading Frame (ORF).
 9.  **Protein Attribute Calculation (`step09_biophysical_properties`)**:
     -   Computes detailed physicochemical properties (MW, pI, hydrophobicity) for the extracted amino acid sequences.
-10. **Deep Dive Motif Analysis (`step10_motif_analysis`)**:
+34. **Deep Dive Motif Analysis (`step10_motif_analysis`)**:
     -   **Consolidated Feature Analysis**: Visualizes GC content, Sequence Length, and MaxEntScan splice site scores (5'/3') for proper splicing regulation (Lost vs Preserved vs Constitutive).
-    -   **Motif Enrichment**: Performs targeted motif enrichment analysis using **AME** (with relaxed E-value reporting) and DREME. Supports **CisBP** and **RBPDB** databases.
+    -   **Wide-Window Extraction**: Generates sequences with **+/- 50bp context** around splice sites to ensure compatibility with all motif databases in AME.
+    -   **Motif Enrichment**: Performs targeted motif enrichment analysis using **AME** (with relaxed E-value reporting). Supports **CisBP** and **RBPDB** databases.
     -   **Motif Comparison**: Generates scatter plots comparing motif enrichment significance (Lost vs Preserved).
 11. **Mechanism Investigation (`step11_mechanism_investigation`)**:
-    -   **Stalling Analysis**: Tests for "Hard-to-translate" peptide features (Poly-Basic stretches, Proline density, Rare codons).
+    -   **Stalling Analysis**: Comprehensive analysis of translation-coupled stalling features:
+        -   **Metrics**: Basic Density, Proline Density, Net Charge Density, Rare Codon Density, Hydrophobicity.
+        -   **Motifs**: Poly-Basic, Poly-Proline, Poly-Glycine, DiPeptide Slow motifs.
+        -   **Comparisons**: Statistically compares 'UFM1_dependent' and 'UFM1_independent' groups against a **Constitutive 'Genome' Background**.
     -   **Adjacency Analysis**: Checks for spatial co-occurrence of SE and RI events to test regulatory coupling.
     -   **Sequence Properties**: Verifies GC content and exon length stability.
 
@@ -198,15 +202,20 @@ The main pipeline script `run_pipeline.py` accepts several arguments to customiz
     *   **Default**: `SE` (Skipped Exon). Can be multiple types.
     *   **Example**: `--event_types SE A3SS A5SS`
 
-*   `--direction` (optional, for `AAfeatures.sh`):
-    *   **Description**: If set, enables direction-based splitting in the `AAfeatures.sh` script.
+*   `--direction` (optional, for Step 11):
+    *   **Description**: If set, enables stalling analysis for both **Negative** (dPSI < 0) and **Positive** (dPSI > 0) event directions in Step 11.
     *   **Type**: Flag (no value needed).
     *   **Example**: `--direction`
     
-*   `--cache-dir` (optional):
-    *   **Description**: Directory to store persistent caching (TxDb, Biomart).
-    *   **Default**: `data/cache`
-    *   **Example**: `--cache-dir /tmp/mycache`
+*   `--motif-db` (optional):
+    *   **Description**: Path to MEME Motif DB for AME (Step 10) and RNA Map (Step 12).
+    *   **Default**: `data/motifs/CisBP_{Species}_All.meme`
+    *   **Example**: `--motif-db data/motifs/my_motifs.meme`
+
+*   `--motifs` (optional, for Step 12):
+    *   **Description**: List of specific motif names (or symbols) to plot in the RNA Map.
+    *   **Default**: A predefined list of RBPs (RBMY1D, MBNL1, PCBP2, SRSF3, etc.)
+    *   **Example**: `--motifs SRSF3_SRp20 SRSF7`
 
 #### Example Usage with Parameters:
 ```bash
@@ -243,5 +252,21 @@ Results are saved in `results/{species}/{fraction}/`. The output is organized in
     *   **`master_features.tsv`**: Consolidated table of GC content, length, and MaxEnt scores.
     *   **`combined_features.pdf`**: Multi-panel plot visualizing feature distributions.
     *   **`motif_comparison.png`**: Scatter plot of AME enrichment (if run with RBPDB/CisBP).
+
+### 5. Mechanism Investigation (`step11_mechanism_investigation/`)
+*   **`SE_dPSI_negative/`** (and `positive` if `--direction` used):
+*   **`Boxplot_*.png`**: Distribution of density metrics (Basic, Proline, Hydrophobicity) comparing Dependent vs Independent vs Genome.
+*   **`Barplot_*.png`**: Prevalence of stalling motifs (Poly-Basic, Poly-Pro, etc.).
+*   **`stalling_stats.tsv`**: P-values and Odds Ratios for all statistical comparisons against the Genome.
+
+### 6. Positional Motif Enrichment (`step12_rna_maps/`)
+*   **`RNA_Map_{RBP}_*.png`**: Positional enrichment plots for specific RBPs (e.g. MBNL1, PCBP2, SRSF5, SRSF3) showing motif density around 5' and 3' splice sites.
+    *   Compares UFM1-dependent (Lost), UFM1-independent (Preserved), and Constitutive Introns (Background).
+    *   **Window**: Standard analysis window is **+/- 50bp** around the splice junction.
+*   **`*_SequenceLogo.pdf`**: Positional sequence logos (`ggseqlogo`) showing nucleotide composition (bits) for the same windows.
+*   **Custom Motifs**: You can specify custom motifs to plot using the `--motifs` argument in `run_pipeline.py`.
+
+
+
 
 

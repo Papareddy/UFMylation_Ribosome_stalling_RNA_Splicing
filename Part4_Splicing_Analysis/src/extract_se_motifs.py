@@ -63,12 +63,18 @@ def get_intervals(row):
         a_end = c_start + 3
         bed_entries['3ss'] = (chrom, a_start, a_end, strand)
         
+        # Wide (AME)
+        bed_entries['3ss_wide'] = (chrom, c_start - 50, c_start + 50, strand)
+        
         # 5'SS (Donor) of Cassette Exon (at c_end)
         # Sequence: ...Exon | Intron...
         # [c_end - 3, c_end + 6]
         d_start = c_end - 3
         d_end = c_end + 6
         bed_entries['5ss'] = (chrom, d_start, d_end, strand)
+        
+        # Wide (AME)
+        bed_entries['5ss_wide'] = (chrom, c_end - 50, c_end + 50, strand)
         
     else: # '-'
         # Transcript direction: High -> Low
@@ -113,6 +119,9 @@ def get_intervals(row):
         a_end = c_end + 20
         bed_entries['3ss'] = (chrom, a_start, a_end, strand)
         
+        # Wide (AME)
+        bed_entries['3ss_wide'] = (chrom, c_end - 50, c_end + 50, strand)
+        
         # 5'SS (Donor) of Cassette Exon (at c_start)
         # Sequence: ...Exon | Intron (Low)...
         # Junction at c_start.
@@ -127,6 +136,9 @@ def get_intervals(row):
         d_start = c_start - 6
         d_end = c_start + 3
         bed_entries['5ss'] = (chrom, d_start, d_end, strand)
+        
+        # Wide (AME)
+        bed_entries['5ss_wide'] = (chrom, c_start - 50, c_start + 50, strand)
         
         # Flanking Introns (150bp)
         # Upstream Intron (genomic higher than c_end): [c_end + 20, c_end + 170] -> RevComp (Intron downstream of cassette in transcription)
@@ -170,7 +182,7 @@ def get_intervals(row):
     return bed_entries
 
 def write_beds(df, out_prefix):
-    keys = ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream']
+    keys = ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide']
     beds = {k: open(f"{out_prefix}.{k}.bed", "w") for k in keys}
     
     for idx, row in df.iterrows():
@@ -206,7 +218,7 @@ def main():
     if "EventType" in preserved.columns:
         preserved = preserved[preserved["EventType"] == "SE"]
     
-    groups = {"lost": lost, "preserved": preserved}
+    groups = {"UFM1_dependent": lost, "UFM1_independent": preserved}
     
     for grp_name, df in groups.items():
         print(f"[INFO] Processing {grp_name} (n={len(df)})...")

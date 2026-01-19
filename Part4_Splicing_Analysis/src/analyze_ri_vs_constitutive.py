@@ -4,7 +4,6 @@ Comparisons of RI Introns (Lost/Preserved) against a Constitutive Intron Backgro
 Uses:
 1. generate_constitutive_introns.py (to get bg BED)
 2. bedtools getfasta (to get bg FASTA)
-3. dreme (to compare motifs)
 """
 
 import os
@@ -50,8 +49,8 @@ def main():
         cmd_gen = f"python3 {gen_script} --gtf {args.gtf} --out_bed {const_bed} --exclude_files {args.lost_tsv} {args.preserved_tsv} --n_sample 5000"
         run_cmd(cmd_gen, "Generating Constitutive Intron Background")
     
-    # 2. Extract Background Sequences (Intron, 5'SS, 3'SS)
-    kinds = ['intron', '5ss', '3ss']
+    # 2. Extract Background Sequences (Intron, 5'SS, 3'SS, Wide Variants)
+    kinds = ['intron', '5ss', '3ss', '5ss_wide', '3ss_wide']
     
     # BED paths inferred from generate_constitutive_introns logic
     # It produced base_out.[kind].bed
@@ -176,49 +175,62 @@ def main():
     except:
         print("[WARN] Feature plotting failed.")
 
-    # 5B: AME (Known Motifs)
+    # 5B: AME (Known Motifs) - Loop over regions
+    regions = ['intron', '5ss', '3ss']
+    
     if args.motif_db and os.path.exists(args.motif_db):
-        print(f"[INFO] Analysis 5B: Running AME with {args.motif_db}...")
-        # Lost
-        if os.path.exists(args.lost_fa):
-            out_ame_l = os.path.join(args.outdir, "ame_UFM1_dependent_vs_constitutive")
-            # Added --evalue-report-threshold 1000
-            cmd_ame_l = f"mamba run -n meme_env ame --evalue-report-threshold 1000 --control {fastas['intron']} --oc {out_ame_l} {args.lost_fa} {args.motif_db}"
-            try: run_cmd(cmd_ame_l, "AME: UFM1_dependent vs Constitutive")
-            except: print("[WARN] AME UFM1_dependent failed.")
-        
-        # Preserved
-        if os.path.exists(args.preserved_fa):
-            out_ame_p = os.path.join(args.outdir, "ame_UFM1_independent_vs_constitutive")
-             # Added --evalue-report-threshold 1000
-            cmd_ame_p = f"mamba run -n meme_env ame --evalue-report-threshold 1000 --control {fastas['intron']} --oc {out_ame_p} {args.preserved_fa} {args.motif_db}"
-            try: run_cmd(cmd_ame_p, "AME: UFM1_independent vs Constitutive")
-            except: print("[WARN] AME UFM1_independent failed.")
+        for r in regions:
+            print(f"[INFO] Analysis 5B: Running AME for {r} with {args.motif_db}...")
+            
+            # Infer paths
+            # args.lost_fa defines the prefix mostly.
+            # lost_fa input is "path/lost.intron.fa"
+            # so we replace ".intron.fa" with ".{r}.fa"
+            
+            # Determine Wide variant for SS
+            if r in ['5ss', '3ss']:
+                r_use = f"{r}_wide"
+            else:
+                r_use = r
+                
+            l_fa = args.lost_fa.replace(".intron.fa", f".{r_use}.fa")
+            p_fa = args.preserved_fa.replace(".intron.fa", f".{r_use}.fa")
+            bg_fa = fastas[r_use] # constitutive
+            
+            if not os.path.exists(l_fa) or not os.path.exists(p_fa) or not os.path.exists(bg_fa):
+                print(f"[WARN] Missing input files for AME region {r} (using {r_use}). Skipping.")
+                continue
+                
+            # Run AME - Dependent
+            out_ame_l = os.path.join(args.outdir, f"ame_{r}_UFM1_dependent_vs_constitutive")
+            cmd_ame_l = f"mamba run -n meme_env ame --verbose 1 --evalue-report-threshold 1000 --control {bg_fa} --oc {out_ame_l} {l_fa} {args.motif_db}"
+            try: run_cmd(cmd_ame_l, f"AME {r}: UFM1_dependent vs Constitutive")
+            except: print(f"[WARN] AME {r} UFM1_dependent failed.")
+            
+            # Run AME - Independent
+            out_ame_p = os.path.join(args.outdir, f"ame_{r}_UFM1_independent_vs_constitutive")
+            cmd_ame_p = f"mamba run -n meme_env ame --verbose 1 --evalue-report-threshold 1000 --control {bg_fa} --oc {out_ame_p} {p_fa} {args.motif_db}"
+            try: run_cmd(cmd_ame_p, f"AME {r}: UFM1_independent vs Constitutive")
+            except: print(f"[WARN] AME {r} UFM1_independent failed.")
+            
+            # Plot Comparison
+            tsv_l = os.path.join(out_ame_l, "ame.tsv")
+            tsv_p = os.path.join(out_ame_p, "ame.tsv")
+            
+            if os.path.exists(tsv_l) and os.path.exists(tsv_p):
+                print(f"[INFO] Generating Motif Comparison Scatter Plot for {r}...")
+                plot_r_script = os.path.join(args.script_dir, "plot_ame_comparison.R")
+                plot_pdf = os.path.join(args.outdir, f"motif_enrichment_comparison_{r}.pdf")
+                
+                if os.path.exists(plot_r_script):
+                    cmd_plot_r = f"Rscript {plot_r_script} --dep={tsv_l} --indep={tsv_p} --out={plot_pdf}"
+                    try:
+                        run_cmd(cmd_plot_r, f"Plotting Motif Comparison ({r})")
+                    except:
+                        print(f"[WARN] Plotting failed for {r}.")
+
     elif args.motif_db:
         print(f"[WARN] Motif DB not found at {args.motif_db}. Skipping AME.")
-        
-    # --- 5C: Visual Comparison (Red/Blue Scatter) ---
-    # Only run if both AME runs succeeded and produced output
-    if os.path.exists(args.lost_fa) and os.path.exists(args.preserved_fa) and args.motif_db:
-         out_ame_l = os.path.join(args.outdir, "ame_UFM1_dependent_vs_constitutive")
-         out_ame_p = os.path.join(args.outdir, "ame_UFM1_independent_vs_constitutive")
-         
-         tsv_l = os.path.join(out_ame_l, "ame.tsv")
-         tsv_p = os.path.join(out_ame_p, "ame.tsv")
-         
-         if os.path.exists(tsv_l) and os.path.exists(tsv_p):
-             print("[INFO] Generating Motif Comparison Scatter Plot (R)...")
-             plot_r_script = os.path.join(args.script_dir, "plot_ame_comparison.R")
-             
-             if os.path.exists(plot_r_script):
-                 plot_pdf = os.path.join(args.outdir, "motif_enrichment_comparison.pdf")
-                 cmd_plot_r = f"Rscript {plot_r_script} --dep={tsv_l} --indep={tsv_p} --out={plot_pdf}"
-                 try:
-                     run_cmd(cmd_plot_r, "Plotting Motif Comparison")
-                 except:
-                     print("[WARN] R Motif Plotting failed.")
-             else:
-                 print(f"[WARN] Plotting script not found: {plot_r_script}")
 
 
 # ... (Imports) ...

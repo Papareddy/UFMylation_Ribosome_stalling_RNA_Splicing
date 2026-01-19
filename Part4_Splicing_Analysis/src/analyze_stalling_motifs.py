@@ -142,62 +142,132 @@ def main():
     stats_rows = []
     groups = full_df["Group"].unique()
     
-    # Simple pairwise: Lost vs Preserved
-    # Assume groups contain "Lost" and "Preserved" substrings
-    lost_g = [g for g in groups if "UFM1_dependent" in g]
-    pres_g = [g for g in groups if "UFM1_independent" in g]
+    # Updated Stats Logic: Compare against 'Genome' if present, otherwise just pairwise
+    # Or specifically "UFM1_*" against "Genome"
     
-    for l_name in lost_g:
-        for p_name in pres_g:
+    background_group = "Genome"
+    if background_group in groups:
+         experimental_groups = [g for g in groups if g != background_group]
+         comparisons = [(g, background_group) for g in experimental_groups]
+    else:
+         # Fallback to simple lost vs preserved if Genome not found
+         lost_g = [g for g in groups if "UFM1_dependent" in g]
+         pres_g = [g for g in groups if "UFM1_independent" in g]
+         comparisons = []
+         for l in lost_g:
+              for p in pres_g:
+                   comparisons.append((l, p))
+    
+    for g1_name, g2_name in comparisons:
             # Get counts
-            l_data = full_df[full_df["Group"]==l_name]["Poly_Basic"]
-            p_data = full_df[full_df["Group"]==p_name]["Poly_Basic"]
+            g1_data = full_df[full_df["Group"]==g1_name]["Poly_Basic"]
+            g2_data = full_df[full_df["Group"]==g2_name]["Poly_Basic"]
             
-            l_poly = l_data.sum()
-            l_tot = len(l_data)
-            p_poly = p_data.sum()
-            p_tot = len(p_data)
+            g1_poly = g1_data.sum()
+            g1_tot = len(g1_data)
+            g2_poly = g2_data.sum()
+            g2_tot = len(g2_data)
             
             # Fisher matrix: [[Poly, NonPoly], [Poly, NonPoly]]? 
             # Or [[Group1_Poly, Group2_Poly], [Group1_Non, Group2_Non]]?
-            # Scipy: [[a, b], [c, d]]
-            # a: Group1 Poly, b: Group1 Non
-            # c: Group2 Poly, d: Group2 Non
             
-            table = [[l_poly, l_tot - l_poly], [p_poly, p_tot - p_poly]]
+            # Table for fisher_exact: [[G1_Yes, G1_No], [G2_Yes, G2_No]]
+            table = [[g1_poly, g1_tot - g1_poly], [g2_poly, g2_tot - g2_poly]]
             stat, pval = fisher_exact(table)
             
             stats_rows.append({
-                "Group1": l_name,
-                "Group2": p_name,
+                "Group1": g1_name,
+                "Group2": g2_name,
                 "P_Value": pval,
                 "Odds_Ratio": stat,
-                "G1_Pct": (l_poly/l_tot)*100,
-                "G2_Pct": (p_poly/p_tot)*100
+                "G1_Pct": (g1_poly/g1_tot)*100 if g1_tot > 0 else 0,
+                "G2_Pct": (g2_poly/g2_tot)*100 if g2_tot > 0 else 0
             })
-            print(f"[STATS] {l_name} vs {p_name}: P={pval:.2e} (OR={stat:.2f})")
+            print(f"[STATS] {g1_name} vs {g2_name}: P={pval:.2e} (OR={stat:.2f})")
 
     stats_df = pd.DataFrame(stats_rows)
     stats_df.to_csv(os.path.join(args.outdir, "stalling_stats.tsv"), sep="\t", index=False)
 
     # Plotting
-    features = ["Basic_Density", "Proline_Density", "Poly_Basic"]
+    continuous_metrics = ["Basic_Density", "Proline_Density", "Net_Charge_Density", "Rare_Codon_Density", "Hydrophobicity"]
+    binary_metrics = ["Poly_Basic", "Poly_Pro", "Poly_Gly", "DiPeptide_Slow"]
     
-    # Bar plot for Poly_Basic %
-    plt.figure(figsize=(10, 6))
-    summary = full_df.groupby("Group")["Poly_Basic"].mean().reset_index()
-    
-    ax = sns.barplot(data=summary, x="Group", y="Poly_Basic")
-    plt.title("Poly-Basic Motif Prevalence by Group")
-    plt.ylabel("Fraction of Exons with Poly-Basic Stretch")
-    
-    # Annotate stats on plot if simple Lost vs Preserved
-    if len(stats_rows) == 1:
-        row = stats_rows[0]
-        plt.title(f"Poly-Basic Motif Prevalence\n{row['Group1']} vs {row['Group2']}: p={row['P_Value']:.2e}")
+    # 1. Continuous Metrics (Boxplots)
+    for met in continuous_metrics:
+        plt.figure(figsize=(6, 5))
+        sns.boxplot(data=full_df, x="Group", y=met, showfliers=False)
+        sns.stripplot(data=full_df, x="Group", y=met, color="black", alpha=0.3, size=2, jitter=True)
         
-    plt.savefig(os.path.join(args.outdir, "Poly_Basic_Prevalence.png"))
-    
+        # Stats (approximate if multiple groups, but pairwise for title if 2)
+        if len(stats_rows) >= 1:
+             # Add stats for each comparison available in stats_rows (which now has specific pairs)
+             # Just plot p-values for each pair? Too messy on title.
+             # Just print them to console/log, users can see tsv.
+             # Or if we have Genome, check diff against Genome for the primary group (UFM1_dependent)
+             
+             targets = [s for s in stats_rows if s["Group1"] == "UFM1_dependent"]
+             if targets:
+                 # Re-run Mann-Whitney for UFM1_dependence vs Genome
+                 g1 = targets[0]["Group1"]
+                 g2 = targets[0]["Group2"] # Likely Genome
+                 
+                 v1 = full_df[full_df["Group"]==g1][met]
+                 v2 = full_df[full_df["Group"]==g2][met]
+                 
+                 try:
+                     u_stat, u_p = mannwhitneyu(v1, v2)
+                     plt.title(f"{met}\n{g1} vs {g2}\nP={u_p:.2e}")
+                 except: pass
+
+        plt.ylabel(met)
+        plt.tight_layout()
+        plt.savefig(os.path.join(args.outdir, f"Boxplot_{met}.png"))
+        plt.close()
+
+    # 2. Binary Metrics (Barplots)
+    for met in binary_metrics:
+        # Calculate prevalence per group
+        summary = full_df.groupby("Group")[met].mean().reset_index()
+        summary["Percent"] = summary[met] * 100
+        
+        plt.figure(figsize=(6, 5))
+        sns.barplot(data=summary, x="Group", y="Percent")
+        plt.ylabel(f"% Sequence with {met}")
+        
+        # Calc Stats for this metric specifically - Re-run for display
+        # We will use the defined 'comparisons' list from earlier
+        # Assuming comparisons list is accessible here (it is local above) - better to re-derive
+        
+        # Re-derive comparison pairs same as above
+        if "Genome" in groups:
+             comp_pairs = [(g, "Genome") for g in groups if g != "Genome"]
+        else:
+             # fallback
+             comp_pairs = [] # Skip title stats if simple logic fails or just make title generic
+             pass
+
+        if comp_pairs:
+             # Pick the first one involving UFM1_dependent for the title space?
+             # Or just title "Prevalence"
+             relevant = [p for p in comp_pairs if p[0] == "UFM1_dependent"]
+             if relevant:
+                  g1, g2 = relevant[0]
+                  v1 = full_df[full_df["Group"]==g1][met]
+                  v2 = full_df[full_df["Group"]==g2][met]
+                  
+                  c1_yes = v1.sum()
+                  c1_no = len(v1) - c1_yes
+                  c2_yes = v2.sum()
+                  c2_no = len(v2) - c2_yes
+                  
+                  table = [[c1_yes, c1_no], [c2_yes, c2_no]]
+                  stat, pval = fisher_exact(table)
+                  plt.title(f"{met}\n{g1} vs {g2}: P={pval:.2e}")
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(args.outdir, f"Barplot_{met}.png"))
+        plt.close()
+
     print(f"[DONE] Saved comparison to {args.outdir}")
 
 if __name__ == "__main__":

@@ -62,6 +62,7 @@ def get_intervals(row):
     # 5'SS and 3'SS for MaxEntScan
     # MaxEntScan 5'SS: 9mer (3 exon + 6 intron).
     # MaxEntScan 3'SS: 23mer (20 intron + 3 exon).
+    # AME (Motif Analysis): Wider window (+/- 50bp)
     
     bed_entries = {}
     
@@ -81,6 +82,10 @@ def get_intervals(row):
         
         bed_entries['5ss'] = (chrom, d_start, d_end, strand)
         bed_entries['3ss'] = (chrom, a_start, a_end, strand)
+        
+        # Wide (AME)
+        bed_entries['5ss_wide'] = (chrom, u_ee - 50, u_ee + 50, strand)
+        bed_entries['3ss_wide'] = (chrom, d_es - 50, d_es + 50, strand)
         
     else: # '-'
         # Transcript direction: High -> Low
@@ -117,6 +122,12 @@ def get_intervals(row):
         bed_entries['5ss'] = (chrom, d_start, d_end, strand)
         bed_entries['3ss'] = (chrom, a_start, a_end, strand)
 
+        # Wide (AME)
+        # 5'SS (Donor) at downstreamES
+        bed_entries['5ss_wide'] = (chrom, d_es - 50, d_es + 50, strand)
+        # 3'SS (Acceptor) at upstreamEE
+        bed_entries['3ss_wide'] = (chrom, u_ee - 50, u_ee + 50, strand)
+
     # Full Intron
     # [u_ee, d_es]
     bed_entries['intron'] = (chrom, u_ee, d_es, strand)
@@ -124,7 +135,8 @@ def get_intervals(row):
     return bed_entries
 
 def write_beds(df, out_prefix):
-    beds = {k: open(f"{out_prefix}.{k}.bed", "w") for k in ['5ss', '3ss', 'intron']}
+    kinds = ['5ss', '3ss', 'intron', '5ss_wide', '3ss_wide']
+    beds = {k: open(f"{out_prefix}.{k}.bed", "w") for k in kinds}
     
     for idx, row in df.iterrows():
         # Clean chromosome name if needed?
@@ -161,7 +173,7 @@ def main():
         preserved = preserved[preserved["EventType"] == "RI"]
     
     # Process Groups
-    groups = {"lost": lost, "preserved": preserved}
+    groups = {"UFM1_dependent": lost, "UFM1_independent": preserved}
     
     for grp_name, df in groups.items():
         print(f"[INFO] Processing {grp_name} (n={len(df)})...")
@@ -178,27 +190,18 @@ def main():
             # getfasta -s for strand specificity
             cmd = f"bedtools getfasta -s -fi {args.genome_fasta} -bed {bed} -fo {fa} -name"
             run_cmd(cmd, f"Extracting {kind} sequences for {grp_name}")
-
-        # 3. MaxEntScan Scoring
-        # Need to clean FASTA headers or pass to script?
-        # maxentscan usually takes sequence lines or specific format.
-        # "score5.pl reads headers >... and sequence" ? No usually just sequences.
-        # Wrapper might be needed.
-        # Let's inspect maxentscan input.
-        # Usually takes a list of sequences.
-        
-        # We will parse the FASTA and feed sequences to maxentscan script
-        # Wrapper function
+            
+        # 3. MaxEntScan Scores
         score_ss(f"{prefix}.5ss.fa", "5ss")
         score_ss(f"{prefix}.3ss.fa", "3ss")
 
     # 4. Motif Enrichment (AME)
-    # Lost vs Preserved
+    # Lost (Dependent) vs Preserved (Independent)
     if not lost.empty and not preserved.empty:
-        print("[INFO] Running MEME/AME Enrichment (Lost vs Preserved)...")
+        print("[INFO] Running MEME/AME Enrichment (UFM1_dependent vs UFM1_independent)...")
         # Intron sequences
-        lost_fa = os.path.join(args.outdir, "lost.intron.fa")
-        pres_fa = os.path.join(args.outdir, "preserved.intron.fa")
+        lost_fa = os.path.join(args.outdir, "UFM1_dependent.intron.fa")
+        pres_fa = os.path.join(args.outdir, "UFM1_independent.intron.fa")
         out_ame = os.path.join(args.outdir, "ame_results")
         
         # AME command
@@ -209,13 +212,10 @@ def main():
         # If no database provided, AME can't score?
         # User said "De Novo Discovery ... DREME".
         # DREME finds motifs. AME enriches known motifs.
-        # User said "Use MEME Suite (specifically DREME) to find enriched motifs".
+        # User said "Use MEME Suite (specifically AME) to find enriched motifs".
         # So I should run DREME.
         
-        out_dreme = os.path.join(args.outdir, "dreme_results")
-        # dreme -p <primary> -n <control>
-        cmd_dreme = f"mamba run -n meme_env dreme -p {lost_fa} -n {pres_fa} -oc {out_dreme} -dna"
-        run_cmd(cmd_dreme, "Running DREME (De Novo Motif Discovery)")
+
 
 # New score_ss using native python scorer
 import maxent_scorer

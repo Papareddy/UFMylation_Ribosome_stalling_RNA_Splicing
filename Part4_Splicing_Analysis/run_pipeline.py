@@ -16,7 +16,7 @@ def get_args():
     parser.add_argument("--no-fasta", action="store_true", help="Skip protein alignment even if FASTA is found in data directory.")
     
     parser.add_argument("--dpsi", default="0.15", help="Legacy argument. NOTE: dPSI thresholds are now event-specific (SE=0.2, Others=0.1) and set internally in Step 1.")
-    parser.add_argument("--min-reads", default="50", help="Minimum reads threshold (applied to sum of replicates per condition; both conditions must pass).")
+    parser.add_argument("--min-reads", default="20", help="Minimum reads threshold (applied to sum of replicates per condition; both conditions must pass).")
     parser.add_argument("--normalize", default="log2ratio", help="Normalization method for frame shift density.")
     parser.add_argument("--nperm", default="1000", help="Number of permutations for statistics.")
     parser.add_argument("--nbins", default="5", help="Number of bins for density plots.")
@@ -28,6 +28,7 @@ def get_args():
     parser.add_argument("--direction", action="store_true", help="Enable direction-based splitting (dPSI_positive vs dPSI_negative) in AAfeatures.sh.")
     parser.add_argument("--cache-dir", default="data/cache", help="Directory to store persistent cache (TxDb, Biomart results).")
     parser.add_argument("--motif-db", help="Path to MEME Motif DB for AME analysis in Step 10. (default: CisBP for the chosen species)", default=argparse.SUPPRESS)
+    parser.add_argument("--motifs", nargs='+', default=None, help="List of specific motifs to plot in RNA Map (Step 12).")
     
     # Execution Control
     parser.add_argument("--start-step", type=int, default=1, help="Start pipeline from this step (1-9).")
@@ -217,15 +218,18 @@ def main():
         run_splice_impact(args.species, step1_out, run_outdir, gtf_file, args.cache_dir, args.direction)
         
         # Move files to respective step folders for organization
+        # Move files to respective step folders for organization
         domain_tsv_src = os.path.join(run_outdir, 'domain_enrichment.tsv')
         domain_tsv_dst = os.path.join(step3_out, 'domain_enrichment.tsv')
         if os.path.exists(domain_tsv_src):
+            os.makedirs(step3_out, exist_ok=True)
             shutil.move(domain_tsv_src, domain_tsv_dst)
             print(f"[INFO] Moved domain_enrichment.tsv to {step3_out}")
 
         biophys_tsv_src = os.path.join(run_outdir, 'biophysical_enrichment.tsv')
         biophys_tsv_dst = os.path.join(step4_out, 'biophysical_enrichment.tsv')
         if os.path.exists(biophys_tsv_src):
+            os.makedirs(step4_out, exist_ok=True)
             shutil.move(biophys_tsv_src, biophys_tsv_dst)
             print(f"[INFO] Moved biophysical_enrichment.tsv to {step4_out}")
     
@@ -471,8 +475,8 @@ def main():
                      _run_and_log(cmd_10a, f"step10_a_extract_ri_{name}")
                      
                      # 10B: Deep Dive
-                     lost_fa = os.path.join(step10_ri_out, "lost.intron.fa")
-                     pres_fa = os.path.join(step10_ri_out, "preserved.intron.fa")
+                     lost_fa = os.path.join(step10_ri_out, "UFM1_dependent.intron.fa")
+                     pres_fa = os.path.join(step10_ri_out, "UFM1_independent.intron.fa")
                      
                      if os.path.exists(lost_fa) and os.path.exists(pres_fa) and gtf_file:
                           cmd_10b = ["mamba", "run", "-n", "splicing-functional", "python3",
@@ -497,7 +501,6 @@ def main():
             if "SE" in args.event_types:
                  print("[INFO] === Step 10C: SE Motif & Deep Dive Analysis (Directional) ===")
                  
-                 # Define sub-analyses: 'combined', 'pos' (dPSI>0), 'neg' (dPSI<0)
                  analyses = [
                      ("combined", "UFM1_dependent.tsv", "UFM1_independent.tsv"),
                      ("dPSI_positive", "UFM1_dependent_dPSI_positive.tsv", "UFM1_independent_dPSI_positive.tsv"),
@@ -509,24 +512,46 @@ def main():
                      p_path = os.path.join(step1_out, p_name)
                      
                      if not os.path.exists(l_path) or not os.path.exists(p_path):
-                         print(f"[WARN] Skipping SE sub-analysis '{name}': inputs missing ({l_name}, {p_name}). (Maybe run Step 1 again?)")
+                         print(f"[WARN] Skipping SE sub-analysis '{name}': inputs missing.")
                          continue
-                     
+                         
                      print(f"[INFO] Running SE Deep Dive: {name}...")
                      step10_se_out = os.path.join(step10_out, f"SE_DeepDive_{name}")
                      os.makedirs(step10_se_out, exist_ok=True)
                      
-                     cmd_10c = ["mamba", "run", "-n", "splicing-functional", "python3", 
-                                os.path.join(script_dir, "src/analyze_se_vs_constitutive.py"),
+                     # 1. Extract Sequences
+                     cmd_se_a = ["mamba", "run", "-n", "splicing-functional", "python3",
+                                os.path.join(script_dir, "src/extract_se_motifs.py"),
                                 "--lost", l_path,
                                 "--preserved", p_path,
                                 "--genome_fasta", dna_fasta_file,
                                 "--outdir", step10_se_out]
+                     _run_and_log(cmd_se_a, f"step10_a_extract_se_{name}")
                      
-                     if args.motif_db:
-                         cmd_10c.append(f"--motif_db={args.motif_db}")
+                     # 2. Analyze vs Constitutive
+                     lost_prefix = os.path.join(step10_se_out, "UFM1_dependent")
+                     pres_prefix = os.path.join(step10_se_out, "UFM1_independent")
+                     
+                     if os.path.exists(lost_prefix + ".exon.fa") and os.path.exists(pres_prefix + ".exon.fa"):
+                         cmd_se_b = ["mamba", "run", "-n", "splicing-functional", "python3",
+                                    os.path.join(script_dir, "src/analyze_se_vs_constitutive.py"),
+                                    "--gtf", gtf_file,
+                                    "--genome_fasta", dna_fasta_file,
+                                    "--lost_tsv", l_path,
+                                    "--preserved_tsv", p_path,
+                                    "--lost_prefix", lost_prefix,
+                                    "--preserved_prefix", pres_prefix,
+                                    "--outdir", step10_se_out,
+                                    "--script_dir", os.path.join(script_dir, "src")]
                          
-                     _run_and_log(cmd_10c, f"step10_c_se_{name}")
+                         if args.motif_db:
+                             cmd_se_b.append(f"--motif_db={args.motif_db}")
+                             
+                         _run_and_log(cmd_se_b, f"step10_b_deep_dive_se_{name}")
+                     else:
+                         print(f"[WARN] SE FASTA extraction failed or incomplete for {name}. Skipping analysis.")
+                     
+
              
             if "RI" not in args.event_types and "SE" not in args.event_types:
                  print("[INFO] Skipping Step 10 actions (Requires 'RI' or 'SE' in --event_types).")
@@ -574,9 +599,17 @@ def main():
                  # extract_ri_motifs produces lost.intron.fa and preserved.intron.fa
                  
                  if etype == "SE":
-                     input_cands = [("UFM1_dependent", os.path.join(deep_dir, "lost.exon.fa")), ("UFM1_independent", os.path.join(deep_dir, "preserved.exon.fa"))]
+                     input_cands = [
+                         ("UFM1_dependent", os.path.join(deep_dir, "UFM1_dependent.exon.fa")), 
+                         ("UFM1_independent", os.path.join(deep_dir, "UFM1_independent.exon.fa")),
+                         ("Genome", os.path.join(deep_dir, "constitutive_exons.exon.fa"))
+                     ]
                  else:
-                     input_cands = [("UFM1_dependent", os.path.join(deep_dir, "lost.intron.fa")), ("UFM1_independent", os.path.join(deep_dir, "preserved.intron.fa"))]
+                     input_cands = [
+                         ("UFM1_dependent", os.path.join(deep_dir, "UFM1_dependent.intron.fa")), 
+                         ("UFM1_independent", os.path.join(deep_dir, "UFM1_independent.intron.fa")),
+                         ("Genome", os.path.join(deep_dir, "constitutive_introns.intron.fa"))
+                     ]
                  
                  # Verify files exist
                  valid_groups = []
@@ -621,6 +654,64 @@ def main():
                         "--outdir", adj_out]
              _run_and_log(cmd_11b, "step11_b_adjacency")
 
+    # Step 12: Positional Motif Enrichment (RNA Map)
+    if should_run(12):
+        if dna_fasta_file and args.motif_db:
+             print("[INFO] === Step 12: Positional Motif Enrichment (RNA Map) ===")
+             step12_out = os.path.join(run_outdir, "step12_rna_maps")
+             os.makedirs(step12_out, exist_ok=True)
+             
+             # Inputs:
+             # We prefer dPSI_negative (Exclusion/Loss) events as they are "Lost".
+             # If direction splits exist:
+             lost_path = os.path.join(step1_out, "UFM1_dependent_dPSI_negative.tsv")
+             preserved_path = os.path.join(step1_out, "UFM1_independent_dPSI_negative.tsv")
+             
+             if not os.path.exists(lost_path):
+                 # Fallback to combined if split not found
+                 lost_path = os.path.join(step1_out, "UFM1_dependent.tsv")
+                 preserved_path = os.path.join(step1_out, "UFM1_independent.tsv")
+                 print(f"[INFO] Using combined files for RNA Map (dPSI_negative not found).")
+             
+             # Constitutive Background:
+             # From Step 10 - check RI or SE directories
+             # We prioritize RI as per current focus.
+             constitutive_bed = None
+             if "RI" in args.event_types:
+                 # Check Step 10 RI Negative dir
+                 c_cand = os.path.join(run_outdir, "step10_motif_analysis", "RI_DeepDive_dPSI_negative", "constitutive_introns.intron.bed")
+                 if os.path.exists(c_cand): constitutive_bed = c_cand
+             
+             if not constitutive_bed and "SE" in args.event_types:
+                 # Check SE
+                 c_cand = os.path.join(run_outdir, "step10_motif_analysis", "SE_DeepDive_dPSI_negative", "constitutive_exons.exon.bed") 
+                 # Wait, RNA map usually specific to event type. Mixing RI/SE might be weird.
+                 # User requested RNA Map for RI specifically in context of "Intron Retention motfis".
+                 pass
+
+             if os.path.exists(lost_path) and os.path.exists(preserved_path):
+                 cmd_12 = ["mamba", "run", "-n", "splicing-functional", "python3",
+                           os.path.join(script_dir, "src/plot_rna_map.py"),
+                           "--lost", lost_path,
+                           "--preserved", preserved_path,
+                           "--genome", dna_fasta_file,
+                           "--motif_db", args.motif_db,
+                           "--motifs", *(args.motifs if args.motifs else ["RBMY1D", "MBNL1", "PCBP2", "PCBP3", "SRSF5", "SRSF3", "SRSF3_SRp20"]),
+                           "--outdir", step12_out,
+                           "--window", "50",
+                           "--smooth", "40"]
+                 
+                 if constitutive_bed:
+                     cmd_12.extend(["--constitutive", constitutive_bed])
+                 else:
+                     print("[WARN] Constitutive background BED not found. Plotting without background.")
+                     
+                 _run_and_log(cmd_12, "step12_rna_map")
+             else:
+                 print(f"[WARN] Skipping Step 12: Input files missing ({lost_path}, {preserved_path})")
+        else:
+             print("[INFO] Skipping Step 12 (Requires DNA FASTA and Motif DB).")
+             
     print("\n" + "="*60)
     print("       PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60 + "\n")
