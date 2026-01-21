@@ -15,11 +15,12 @@ def get_args():
     # NEW FLAG: Explicitly skip alignment even if FASTA is found
     parser.add_argument("--no-fasta", action="store_true", help="Skip protein alignment even if FASTA is found in data directory.")
     
-    parser.add_argument("--dpsi", default="0.15", help="Legacy argument. NOTE: dPSI thresholds are now event-specific (SE=0.2, Others=0.1) and set internally in Step 1.")
+    parser.add_argument("--dpsi", default="0.1", help="dPSI threshold for filtering and preservation (default: 0.1)")
     parser.add_argument("--min-reads", default="20", help="Minimum reads threshold (applied to sum of replicates per condition; both conditions must pass).")
     parser.add_argument("--normalize", default="log2ratio", help="Normalization method for frame shift density.")
     parser.add_argument("--nperm", default="1000", help="Number of permutations for statistics.")
     parser.add_argument("--nbins", default="5", help="Number of bins for density plots.")
+    parser.add_argument("--anchored_window", type=int, default=100, help="Window size (bp) for Start/Stop codon anchored density analysis.")
     parser.add_argument("--pool", action="store_true", help="Pool data before processing.")
     parser.add_argument("--event_types", nargs='+', default=["SE"], help="List of splicing event types to include. Options: SE, A3SS, A5SS, MXE, RI.")
     parser.add_argument("--fdr", type=float, default=0.05, help="FDR threshold for rMATS filtering.")
@@ -32,16 +33,38 @@ def get_args():
     
     # Execution Control
     parser.add_argument("--start-step", type=int, default=1, help="Start pipeline from this step (1-9).")
-    parser.add_argument("--steps", type=int, nargs='+', help="Run only specific steps (e.g. 3 4). Overrides --start-step.")
+    parser.add_argument("--steps", nargs='+', help="Run only specific steps (e.g. 1-7 or 3 4). Overrides --start-step.")
     
     args = parser.parse_args()
     if not hasattr(args, 'motif_db'): args.motif_db = None
+
+    # Parse --steps range if present
+    if args.steps:
+        expanded_steps = []
+        for s in args.steps:
+            if '-' in s:
+                try:
+                    start, end = map(int, s.split('-'))
+                    expanded_steps.extend(range(start, end + 1))
+                except ValueError:
+                    print(f"[ERROR] Invalid range format: {s}")
+                    sys.exit(1)
+            else:
+                try:
+                    expanded_steps.append(int(s))
+                except ValueError:
+                    print(f"[ERROR] Invalid step number: {s}")
+                    sys.exit(1)
+        args.steps = sorted(list(set(expanded_steps)))
     return args
+
+LOG_DIR = "logs"
 
 def _run_and_log(cmd, log_name):
     """Helper to run shell commands and log status to file and console."""
-    os.makedirs("logs", exist_ok=True)
-    log_file = os.path.join("logs", f"{log_name}.log")
+    global LOG_DIR
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log_file = os.path.join(LOG_DIR, f"{log_name}.log")
     print(f"[EXEC] {' '.join(cmd)} (Log: {log_file})")
     
     with open(log_file, "w") as f:
@@ -86,6 +109,12 @@ def run_splice_impact(species, indir, outdir, gtf_file, cache_dir, direction):
 
 def main():
     args = get_args()
+    
+    # Set global LOG_DIR to be inside outdir
+    global LOG_DIR
+    LOG_DIR = os.path.join(args.outdir, "logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
+    
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     # --- File Detection & Setup ---
@@ -210,6 +239,15 @@ def main():
                         f"--wt_dir={wt_dir}", f"--ufm_dir={ufm_dir}", f"--outdir={step1_out}", 
                         f"--fdr={args.fdr}", f"--dpsi={args.dpsi}", f"--min_reads={args.min_reads}",
                         f"--event_types={event_types_str}"], "step01_data_prep")
+
+        # Automatically export BED/RDS for downstream use (Moved from old Step 14)
+        print("[INFO] === Step 1: Exporting Events (BED/RDS) ===")
+        cmd_export = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                    os.path.join(script_dir, "src/export_events.R"),
+                    "--dependent", os.path.join(step1_out, "UFM1_dependent.tsv"),
+                    "--independent", os.path.join(step1_out, "UFM1_independent.tsv"),
+                    "--outdir", step1_out] # Save directly in Step 1 output
+        _run_and_log(cmd_export, "step01_export_events")
 
     # Step 2: SpliceImpactR Integration
     if should_run(2):
@@ -372,6 +410,8 @@ def main():
                cmd6d = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/plot_SE_distribution.py"), "--per_event_file", per_event_file, "--output_file", se_plot_file, "--background_counts", bg_file_se, "--stats_table", stats_file_se]
                _run_and_log(cmd6d, "step06_plot_SE_distribution")
 
+    # Anchored Density Analysis moved to Step 14 as per user request
+
     # Step 7: Add Frame Shift Density (Formerly Step 9)
     if should_run(7):
         print("[INFO] === Step 7: Frame Shift Density Analysis ===")
@@ -402,6 +442,8 @@ def main():
                 # Standard Analysis
                 cmd7 = cmd_base + ["--out_prefix", f"{step7_out}/fig4", "--dataset_order", "UFM1_dependent,UFM1_independent"] 
                 _run_and_log(cmd7, "step07_frameshift_density")
+
+
         else:
             print(f"[WARN] Input file for Step 7 not found: {input_step7}. Skipping Step 7.")
 
@@ -440,6 +482,16 @@ def main():
             print("[INFO] === Step 10: Motif & Deep Dive Analysis ===")
             step10_out = os.path.join(run_outdir, "step10_motif_analysis")
             os.makedirs(step10_out, exist_ok=True)
+            
+            # Generate SRSF3_SRp20 Seqlogo
+            custom_meme = os.path.join(script_dir, "data/motifs/custom_SRSF3_SRSF7.meme")
+            if os.path.exists(custom_meme):
+                print("[INFO] Generating SRSF3_SRp20 Sequence Logo...")
+                cmd_logo = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                            os.path.join(script_dir, "src/plot_custom_logo.R"),
+                            custom_meme,
+                            os.path.join(step10_out, "SRSF3_SRp20_logo.pdf")]
+                _run_and_log(cmd_logo, "step10_srsf3_logo")
             
             # 10A/B: RI Analysis
             # 10A/B: RI Analysis
@@ -712,10 +764,212 @@ def main():
         else:
              print("[INFO] Skipping Step 12 (Requires DNA FASTA and Motif DB).")
              
-    print("\n" + "="*60)
+    # Step 13: Anchored Intron GC Content Analysis
+    # Merged into Step 14
+    if should_run(13):
+        print("[INFO] Step 13 is merged into Step 14. Please run Step 14.")
+    # Step 14: Genomic & Sequence Associations (miRNA, NMD) - Uses files from Step 1
+    if should_run(14):
+         print("[INFO] === Step 14: Genomic & Sequence Associations ===")
+         
+         step14_out = os.path.join(run_outdir, "step14_genomic_associations")
+         os.makedirs(step14_out, exist_ok=True)
+         
+         # Check Step 1 for the RDS file
+         events_rds = os.path.join(step1_out, "UFM1_events_rich.rds")
+         
+         if not os.path.exists(events_rds):
+             print(f"[WARN] Step 14 Input {events_rds} missing! Did Step 1 run? Attempting to generate it now...")
+             # Fallback: Run export if missing
+             cmd_14 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                    os.path.join(script_dir, "src/export_events.R"),
+                    "--dependent", os.path.join(step1_out, "UFM1_dependent.tsv"),
+                    "--independent", os.path.join(step1_out, "UFM1_independent.tsv"),
+                    "--outdir", step1_out]
+             _run_and_log(cmd_14, "step14_export_events_fallback")
+         
+         # Genomic Associations (Merged from Step 15)
+         print("[INFO] === Genomic Associations (miRNA, NMD) ===")
+         
+         # Note: Step 1 now outputs to step1_out, but we can organize them into step14_out if preferred.
+         # For now, let's keep outputs in step14_out but use input from step1_out.
+         if os.path.exists(events_rds) and gtf_file and dna_fasta_file:
+             # A. miRNA Isoform Analysis
+             print("[INFO] Step 14A: miRNA Isoform Analysis...")
+             mirna_out = os.path.join(step14_out, "mirna_isoform_analysis")
+             os.makedirs(mirna_out, exist_ok=True)
+             
+             cmd_14a = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                        os.path.join(script_dir, "src/analyze_mirna_isoforms.R"),
+                        "--gtf", gtf_file,
+                        "--fasta", dna_fasta_file,
+                        "--events", events_rds,
+                        "--species", args.species,
+                        "--outdir", mirna_out]
+             _run_and_log(cmd_14a, "step14a_mirna_isoforms")
+             
+             # B. NMD Analysis (Features & Metagene)
+             print("[INFO] Step 14B: NMD Susceptibility Analysis...")
+             nmd_out = os.path.join(step14_out, "nmd_analysis")
+             os.makedirs(nmd_out, exist_ok=True)
+             
+             # Risk & Length
+             cmd_14b1 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                         os.path.join(script_dir, "src/analyze_nmd_features.R"),
+                         "--gtf", gtf_file,
+                         "--events", events_rds,
+                         "--outdir", nmd_out]
+             _run_and_log(cmd_14b1, "step14b_nmd_features")
+             
+             # Metagene Plot
+             cmd_14b2 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                         os.path.join(script_dir, "src/plot_nmd_metagene.R"),
+                         "--gtf", gtf_file,
+                         "--events", events_rds,
+                         "--outdir", nmd_out]
+             _run_and_log(cmd_14b2, "step14b_nmd_metagene")
+
+             # Feature Length Analysis (Introns & 3'UTRs)
+             print("[INFO] Step 14B-3: Feature Length Analysis...")
+             feat_len_out = os.path.join(step14_out, "feature_lengths")
+             os.makedirs(feat_len_out, exist_ok=True)
+             
+             cmd_14b3 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                         os.path.join(script_dir, "src/analyze_feature_lengths.R"),
+                         "--gtf", gtf_file,
+                         "--events", events_rds,
+                         "--outdir", feat_len_out]
+             _run_and_log(cmd_14b3, "step14b_feature_lengths")
+             
+             # EJC + PTC Analysis
+             print("[INFO] Step 14B-4: EJC & PTC Analysis...")
+             cmd_14b4 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                         os.path.join(script_dir, "src/EJC_PTC.R"),
+                         "--gtf", gtf_file,
+                         "--fasta", dna_fasta_file,
+                         "--events", events_rds,
+                         "--outdir", nmd_out]
+             _run_and_log(cmd_14b4, "step14b_ejc_ptc")
+             
+             # Anchored Stop Codon Intron Density
+             print("[INFO] Step 14B-5: Anchored Stop Codon Intron Density...")
+             cmd_14b5 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                         os.path.join(script_dir, "src/anchored_stopcodon_intron_density.R"),
+                         "--gtf", gtf_file,
+                         "--events", events_rds,
+                         "--outdir", nmd_out,
+                         "--window", str(args.anchored_window)]
+             _run_and_log(cmd_14b5, "step14b_stopcodon_density")
+             
+             # Step 14B-6: 3'SS Sequence Logo (+/- 20bp)
+             print("[INFO] Step 14B-6: 3'SS Sequence Logo (+/- 20bp)...")
+             step14_3ss_out = os.path.join(step14_out, "3ss_sequence_logos")
+             os.makedirs(step14_3ss_out, exist_ok=True)
+             
+             cmd_14b6_extract = ["mamba", "run", "-n", "splicing-functional", "python3",
+                                os.path.join(script_dir, "src/extract_3ss_sequences.py"),
+                                "--lost", os.path.join(step1_out, "UFM1_dependent.tsv"),
+                                "--preserved", os.path.join(step1_out, "UFM1_independent.tsv"),
+                                "--gtf", gtf_file,
+                                "--genome_fasta", dna_fasta_file,
+                                "--outdir", step14_3ss_out,
+                                "--script_dir", os.path.join(script_dir, "src")]
+             _run_and_log(cmd_14b6_extract, "step14b_extract_3ss")
+
+             cmd_14b6_plot = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                             os.path.join(script_dir, "src/plot_3ss_logo.R"),
+                             "--dep", os.path.join(step14_3ss_out, "UFM1_dependent.3ss_20bp.fa"),
+                             "--indep", os.path.join(step14_3ss_out, "UFM1_independent.3ss_20bp.fa"),
+                             "--const", os.path.join(step14_3ss_out, "Constitutive.3ss_20bp.fa"),
+                             "--out", os.path.join(step14_3ss_out, "3ss_sequence_logo.pdf")]
+             _run_and_log(cmd_14b6_plot, "step14b_plot_3ss_logo")
+             
+         else:
+             print("[WARN] Skipping Genomic Associations: Inputs missing (RDS, GTF, or FASTA). Run Step 14 Export first.")
+
+         # C. Anchored Intron GC (Merged from Step 13)
+         if dna_fasta_file:
+             print("[INFO] === Step 14C: Anchored Intron GC Content Analysis (Merged Step 13) ===")
+             step14_gc_out = os.path.join(step14_out, "anchored_intron_gc")
+             os.makedirs(step14_gc_out, exist_ok=True)
+
+             dependent_tsv = os.path.join(step1_out, "UFM1_dependent.tsv")
+             independent_tsv = os.path.join(step1_out, "UFM1_independent.tsv")
+
+             if os.path.exists(dependent_tsv) and os.path.exists(independent_tsv):
+                 cmd_gc = ["mamba", "run", "-n", "splicing-functional", "python3",
+                           os.path.join(script_dir, "src/analyze_anchored_intron_gc.py"),
+                           "--dependent", dependent_tsv,
+                           "--independent", independent_tsv,
+                           "--gtf", gtf_file,
+                           "--genome", dna_fasta_file,
+                           "--outdir", step14_gc_out,
+                           "--window", str(args.anchored_window)]
+                 _run_and_log(cmd_gc, "step14c_anchored_intron_gc")
+             else:
+                 print("[WARN] Skipping Anchored GC: Input TSVs missing.")
+
+         # D. Anchored Density Plot Data (Merged from Step 6)
+         print("[INFO] === Step 14D: Anchored Density Analysis (Merged from Step 6) ===")
+         step6_out_dir = os.path.join(run_outdir, "step06_protein_sequence_impact")
+         per_event_file_local = os.path.join(step6_out_dir, "per_event_compact_for_plotting.tsv")
+         
+         if os.path.exists(per_event_file_local):
+             event_type_str = "_".join(args.event_types)
+             out_filename = f"anchored_density_{event_type_str}_plot_data.tsv"
+             out_filepath = os.path.join(step14_out, out_filename) 
+             
+             cmd_dens = ["mamba", "run", "-n", "splicing-functional", "python3",
+                         os.path.join(script_dir, "src/analyze_anchored_density.py"),
+                         "--input_table", per_event_file_local,
+                         "--gtf", gtf_file,
+                         "--outdir", step14_out,
+                         "--outfile", out_filepath,
+                         "--window", str(args.anchored_window)]
+             _run_and_log(cmd_dens, "step14d_anchored_density")
+         else:
+             print(f"[WARN] Skipping Anchored Density: Step 6 Output ({per_event_file_local}) missing.")
+
+    # Step 15: Motif Target Identification & Subcellular Distribution (Human Only)
+    if should_run(15):
+        if args.species == "human":
+            print("[INFO] === Step 15: Motif Target Identification & Subcellular Distribution ===")
+            step15_out = os.path.join(run_outdir, "step15_subcellular_distribution")
+            os.makedirs(step15_out, exist_ok=True)
+            
+            # Check for required inputs
+            dependent_tsv = os.path.join(step1_out, "UFM1_dependent.tsv")
+            independent_tsv = os.path.join(step1_out, "UFM1_independent.tsv")
+            expression_file = os.path.join(data_dir, "ForExport_Human_project_salmon.merged.gene_tpm.tsv")
+            step10_out_dir = os.path.join(run_outdir, "step10_motif_analysis")
+            ame_dir = os.path.join(step10_out_dir, "RI_DeepDive_combined")
+            intron_fasta = os.path.join(ame_dir, "UFM1_dependent.intron.fa")
+            
+            if os.path.exists(dependent_tsv) and os.path.exists(independent_tsv) and os.path.exists(expression_file):
+                cmd_15 = ["mamba", "run", "-n", "splicing-functional", "python3",
+                          os.path.join(script_dir, "src/step15_motif_subcellular.py"),
+                          "--ame_dir", ame_dir,
+                          "--dependent_tsv", dependent_tsv,
+                          "--independent_tsv", independent_tsv,
+                          "--expression_file", expression_file,
+                          "--outdir", step15_out]
+                
+                if os.path.exists(intron_fasta):
+                    cmd_15.extend(["--intron_fasta", intron_fasta])
+                
+                _run_and_log(cmd_15, "step15_subcellular")
+            else:
+                missing = []
+                if not os.path.exists(dependent_tsv): missing.append("dependent_tsv")
+                if not os.path.exists(independent_tsv): missing.append("independent_tsv")
+                if not os.path.exists(expression_file): missing.append("expression_file")
+                print(f"[WARN] Skipping Step 15: Missing inputs: {', '.join(missing)}")
+        else:
+            print(f"[INFO] Step 15 is only available for Human species. Skipping for {args.species}.")
+    
     print("       PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60 + "\n")
     print(f"Results are available in: {run_outdir}")
-        
+
 if __name__ == "__main__":
     main()

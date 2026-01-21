@@ -1,62 +1,73 @@
 # Project Handoff: Splicing Analysis Pipeline
 
-## Project Status (As of Jan 18, 2026)
-This repository contains a splicing analysis pipeline that allows for:
-1.  **Domain Enrichment**: Identifying Pfam domains enriched in alternatively spliced genes.
-2.  **Protein Attribute Enrichment** (formerly Biophysical): Analyzing Signal Peptides, Transmembrane Domains, and Coiled-Coils.
-3.  **Visualization**: Generating Volcano plots and grouped bar charts.
+## Project Status (As of Jan 21, 2026)
+This repository contains a comprehensive splicing analysis pipeline for Human, Mouse, and Arabidopsis. It performs motif enrichment, functional impact, and subcellular distribution analyses.
 
 ## Key Features Implemented
--   **Multi-Species Support**: Validated for **Human** and **Mouse**.
-    -   Automatically selects Ensembl datasets (`hsapiens_gene_ensembl`, `mmusculus_gene_ensembl`).
-    -   Handles directory structures without 'nucleus' subfolder (e.g. Mouse data).
--   **Persistent Caching**:
-    -   All Biomart downloads and TxDb objects are cached in `data/cache` (configurable via `--cache-dir`).
-    -   Reduces runtime and dependency on Ensembl availability.
--   **Streamlined Pipeline**:
-    -   Refactored into 11 sequential, clearly named steps.
-    -   Consistent terminology ("Protein Attributes" instead of "Biophysical").
--   **Directionality (`--direction`)**:
-    -   Splits events into **psI** (Promote Splicing Inclusion, dPSI > 0) and **psE** (Promote Splicing Exclusion, dPSI < 0).
-    -   Generates faceted plots for these subsets.
--   **Background Selection (`--background`)**:
-    -   `genome` (Default): Uses all genes in the annotation.
-    -   `rmats`: Uses only genes tested in rMATS.
+-   **Multi-Species Support**: Human, Mouse, Arabidopsis.
+-   **15-Step Pipeline**: From data prep through subcellular distribution analysis.
+-   **Persistent Caching**: TxDb and Biomart data cached in `data/cache`.
+-   **Configurable Thresholds**: `--fdr`, `--dpsi`, `--min-reads`, `--event_types`.
 
-## How to Run
+## Recent Changes (Jan 21, 2026)
 
-### 1. Standard Run (Human)
+### Step 15: Motif Target Identification & Subcellular Distribution (Human Only)
+-   **New Script**: `src/step15_motif_subcellular.py`
+    -   Scans UFM1-dependent introns for SRSF3/PCBP2 motifs.
+    -   Calculates Nucleus/Cytosol (N/C) ratios from gene expression data.
+    -   Generates N/C shift scatter plots (DMSO vs DOX contexts).
+    -   Produces CDF and Boxplot comparisons (Background vs Dependent-Specific vs Overlap).
+    -   Outputs: `NC_shift_combined.png`, `NC_shift_CDF_*.pdf`, `NC_shift_Boxplot_*.pdf`.
+
+### Step 15B: Expression Boxplots by Gene Set
+-   **New Script**: `src/step15b_expression_boxplots.py`
+    -   Compares WT (DMSO) vs UFM1 (DOX) expression levels.
+    -   Gene Sets: Background, All UFM1-Dependent, All UFM1-Independent, Motif-Dependent.
+    -   Generates faceted 2x2 boxplot: `Expression_Boxplots_Combined.png`.
+    -   Statistical tests (Wilcoxon) annotated on plots.
+
+### Functional Enrichment Analysis
+-   **New Script**: `src/run_functional_enrichment.R`
+    -   Uses `gprofiler2` for GO/KEGG enrichment.
+    -   Outputs: `*_enrichment_results.csv`, `*_top_terms.csv`, `*_enrichment_plot.pdf`.
+
+### Pipeline Enhancements
+-   **Log Directory**: Logs now saved in `<outdir>/logs/` (previously just `logs/`).
+-   **dPSI Threshold**: Restored to original event-specific defaults (SE=0.2, others=0.1).
+
+## Example Runs
+
+### Human RI with Strict dPSI (0.25)
 ```bash
-mamba run -n splicing-functional python3 run_pipeline.py --species human --background genome
+python3 run_pipeline.py --species human --event_types RI --dpsi 0.25 --outdir hs_RI_0.25
 ```
 
-### 2. Mouse Analysis (Full Features)
+### All Events Except SE (FDR=0.01, dPSI=0.1)
 ```bash
-mamba run -n splicing-functional python3 run_pipeline.py --species mouse --background genome --direction
+python3 run_pipeline.py --species human --event_types A3SS A5SS MXE RI --fdr 0.01 --steps 1 --outdir hs_allExceptSE_fdr0.01_dpsi0.1
 ```
 
-## Repository Structure
--   `run_pipeline.py`: Main entry point (Steps 1-11).
--   `src/get_splice_impact_features.R`: Core R logic for enrichment (Impact + Protein Attributes).
--   `src/splicing_functional_impat.py`: Upstream annotation script. Outputs `inclusion_transcript_ids` and `exclusion_transcript_ids`.
--   `src/protein_primary_sequence_impact.py`: Refactored protein impact analysis. Uses `pysam` for efficient FASTA handling.
--   `src/analyze_domain_enrichment.py`: Python plotting logic for Volcano and Bar charts.
--   `data/cache/`: Directory containing persistent `.sqlite` (TxDb) and `.rds` (Biomart) files.
+## Key Outputs
 
-## Recent Changes (Jan 18, 2026)
--   **Refactored Protein Impact Analysis** (Jan 17):
-    -   **Biological Logic**: Requires explicit matching of `inclusion_transcript_ids` and `exclusion_transcript_ids`.
-    -   **Performance**: Swapped dictionary-based FASTA loading for `pysam.FastaFile`.
-    -   **Mouse Pipeline Fixes**: Auto-detects data directories and handles case-insensitive file matching.
--   **Cleanup**: Removed experimental microsome enrichment step (Step 12).
+| Step | Output Directory | Key Files |
+|------|------------------|-----------|
+| 1 | `step01_data_prep/` | `UFM1_dependent.tsv`, `UFM1_independent.tsv` |
+| 10 | `step10_motif_analysis/` | AME results, motif comparison plots |
+| 14 | `step14_genomic_associations/` | miRNA, NMD, EJC/PTC, Feature Lengths |
+| 15 | `step15_subcellular_distribution/` | N/C shift plots, Expression boxplots |
+
+## dPSI Thresholds (Default)
+| Event Type | Threshold |
+|------------|-----------|
+| SE | ≥ 0.2 |
+| RI, A3SS, A5SS, MXE | ≥ 0.1 |
 
 ## Next Steps for New Agent
--   Check `context/task.md` for the full checklist.
--   Refer to `context/walkthrough.md` for visual examples of Key Results.
+1.  Review `hs_RI_0.25/` results (stricter dPSI threshold analysis).
+2.  Review `functional_analysis/` for GO enrichment insights.
+3.  Consider extending Step 15/15B to Mouse data if expression data available.
 
-## Future Maintenance Protocol
-To ensure this context survives for the *next* session, please follow this workflow:
-1.  **Start**: Read this file (`HANDOFF.md`) to get context.
-2.  **Work**: update `task.md` and code as usual.
-3.  **End**: Before the user ends the session, update this `HANDOFF.md` file with your new changes (new features, fixed bugs).
-4.  **Sync**: Copy the updated artifacts (`HANDOFF.md`, `task.md`, etc.) back to `context/` and git push.
+## Maintenance Protocol
+1.  **Start**: Read this `HANDOFF.md`.
+2.  **Work**: Update `task.md` and code.
+3.  **End**: Update this file with new changes.
