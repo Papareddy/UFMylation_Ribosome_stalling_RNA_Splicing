@@ -341,6 +341,10 @@ features$rel_position <- 0.5  # Default middle position if unknown
 # Load original data to get more metadata
 dep_df <- read_tsv(opt$dependent, show_col_types = FALSE)
 indep_df <- read_tsv(opt$independent, show_col_types = FALSE)
+
+# Convert all columns to character to avoid type mismatch when binding
+dep_df <- mutate(dep_df, across(everything(), as.character))
+indep_df <- mutate(indep_df, across(everything(), as.character))
 all_df <- bind_rows(dep_df, indep_df)
 
 # Try to get intron rank from the structure (simplified - estimate from coordinates)
