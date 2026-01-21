@@ -326,21 +326,218 @@ score_bp <- function(seq) {
 features$BP_count <- sapply(intron_seqs, score_bp)
 
 # =============================================================================
-# STEP 1F: Additional Sequence Features
+# STEP 1F: Gene Architecture Features (Position Hypothesis)
 # =============================================================================
+cat("[INFO] Calculating gene architecture features...\n")
 
-# CpG count
-calc_cpg <- function(seq) {
-  if (is.na(seq) || nchar(seq) == 0) return(0)
-  length(gregexpr("CG", toupper(seq))[[1]])
+# Extract intron rank from event_id structure
+# event_id format: chr|strand|gene_start|gene_end|intron_start|intron_end|...
+# We'll estimate intron rank based on position relative to gene
+
+# For now, use intron position within the gene as a proxy
+# Lower coordinate introns = earlier in gene (for + strand)
+features$rel_position <- 0.5  # Default middle position if unknown
+
+# Load original data to get more metadata
+dep_df <- read_tsv(opt$dependent, show_col_types = FALSE)
+indep_df <- read_tsv(opt$independent, show_col_types = FALSE)
+all_df <- bind_rows(dep_df, indep_df)
+
+# Try to get intron rank from the structure (simplified - estimate from coordinates)
+for (i in 1:nrow(features)) {
+  if (i <= length(all_gr) && i <= nrow(all_df)) {
+    # Estimate relative position within gene (0-1)
+    event_parts <- strsplit(all_df$event_id[i], "\\|")[[1]]
+    if (length(event_parts) >= 4) {
+      gene_start <- as.numeric(event_parts[3])
+      gene_end <- as.numeric(event_parts[4])
+      intron_start <- start(all_gr[i])
+      
+      if (!is.na(gene_start) && !is.na(gene_end) && gene_end > gene_start) {
+        features$rel_position[i] <- (intron_start - gene_start) / (gene_end - gene_start)
+      }
+    }
+  }
 }
 
-features$CpG_count <- sapply(intron_seqs, calc_cpg)
-features$CpG_density <- features$CpG_count / (features$intron_length / 1000)
+# Estimate if first intron (early position)
+features$is_first_intron <- ifelse(is.na(features$rel_position) | features$rel_position >= 0.2, 0, 1)
 
-# Remove rows with NAs
-features <- features[complete.cases(features), ]
+# =============================================================================
+# STEP 1G: Upstream Exon Features (Ribosome Kinetics)
+# =============================================================================
+cat("[INFO] Extracting upstream exon features...\n")
+
+# Extract upstream exon sequence (50bp before intron start)
+extract_upstream_exon <- function(gr, genome, window = 50) {
+  seqs <- character(length(gr))
+  for (i in seq_along(gr)) {
+    chr <- as.character(seqnames(gr[i]))
+    if (!chr %in% names(genome)) next
+    chr_seq <- genome[[chr]]
+    strand_i <- as.character(strand(gr[i]))
+    
+    if (strand_i == "+") {
+      exon_start <- max(1, start(gr[i]) - window)
+      exon_end <- start(gr[i]) - 1
+    } else {
+      exon_start <- end(gr[i]) + 1
+      exon_end <- min(length(chr_seq), end(gr[i]) + window)
+    }
+    
+    if (exon_start >= exon_end || exon_end > length(chr_seq)) next
+    
+    exon_seq <- subseq(chr_seq, exon_start, exon_end)
+    if (strand_i == "-") exon_seq <- reverseComplement(exon_seq)
+    seqs[i] <- as.character(exon_seq)
+  }
+  return(seqs)
+}
+
+upstream_exon_seqs <- extract_upstream_exon(all_gr, genome, 50)
+
+# Upstream exon GC content
+features$upstream_exon_GC <- sapply(upstream_exon_seqs, function(s) {
+  if (is.na(s) || nchar(s) == 0) return(NA)
+  bases <- strsplit(toupper(s), "")[[1]]
+  sum(bases %in% c("G", "C")) / length(bases)
+})
+
+# Upstream exon length (actual extracted, should be ~50)
+features$upstream_exon_length <- nchar(upstream_exon_seqs)
+
+# Simple codon optimality proxy: frequency of optimal codons (A/T at 3rd position = more optimal in general)
+calc_codon_optimality <- function(seq) {
+  if (is.na(seq) || nchar(seq) < 6) return(NA)
+  seq_upper <- toupper(seq)
+  # Count codons with A/T at wobble position (3rd, 6th, 9th, etc.)
+  wobble_positions <- seq(3, nchar(seq_upper), by = 3)
+  wobble_bases <- sapply(wobble_positions, function(p) substr(seq_upper, p, p))
+  optimal_count <- sum(wobble_bases %in% c("A", "T"))
+  optimal_count / length(wobble_bases)
+}
+
+features$codon_optimality <- sapply(upstream_exon_seqs, calc_codon_optimality)
+
+# =============================================================================
+# STEP 1H: Decoy Competition (Distraction Hypothesis)
+# =============================================================================
+cat("[INFO] Calculating splice site decoy competition...\n")
+
+# Scan for decoy GT/AG sites within 100bp of real sites
+calc_decoy_competition <- function(gr, genome, window = 100) {
+  decoy_5ss <- numeric(length(gr))
+  decoy_3ss <- numeric(length(gr))
+  
+  for (i in seq_along(gr)) {
+    chr <- as.character(seqnames(gr[i]))
+    if (!chr %in% names(genome)) next
+    chr_seq <- genome[[chr]]
+    strand_i <- as.character(strand(gr[i]))
+    
+    # 5' SS region (around intron start)
+    if (strand_i == "+") {
+      region_5_start <- max(1, start(gr[i]) - window)
+      region_5_end <- min(length(chr_seq), start(gr[i]) + window)
+    } else {
+      region_5_start <- max(1, end(gr[i]) - window)
+      region_5_end <- min(length(chr_seq), end(gr[i]) + window)
+    }
+    
+    if (region_5_start < region_5_end) {
+      region_5_seq <- as.character(subseq(chr_seq, region_5_start, region_5_end))
+      # Count GT dinucleotides (potential 5'SS)
+      gt_matches <- gregexpr("GT", toupper(region_5_seq))[[1]]
+      decoy_5ss[i] <- ifelse(gt_matches[1] == -1, 0, length(gt_matches) - 1)  # -1 for real site
+    }
+    
+    # 3' SS region (around intron end)
+    if (strand_i == "+") {
+      region_3_start <- max(1, end(gr[i]) - window)
+      region_3_end <- min(length(chr_seq), end(gr[i]) + window)
+    } else {
+      region_3_start <- max(1, start(gr[i]) - window)
+      region_3_end <- min(length(chr_seq), start(gr[i]) + window)
+    }
+    
+    if (region_3_start < region_3_end) {
+      region_3_seq <- as.character(subseq(chr_seq, region_3_start, region_3_end))
+      # Count AG dinucleotides (potential 3'SS)
+      ag_matches <- gregexpr("AG", toupper(region_3_seq))[[1]]
+      decoy_3ss[i] <- ifelse(ag_matches[1] == -1, 0, length(ag_matches) - 1)  # -1 for real site
+    }
+  }
+  
+  return(list(decoy_5ss = decoy_5ss, decoy_3ss = decoy_3ss))
+}
+
+decoy_counts <- calc_decoy_competition(all_gr, genome, 100)
+features$decoy_5ss_count <- decoy_counts$decoy_5ss
+features$decoy_3ss_count <- decoy_counts$decoy_3ss
+features$decoy_total <- features$decoy_5ss_count + features$decoy_3ss_count
+
+# =============================================================================
+# STEP 1I: RNA Structural Features (Accessibility)
+# =============================================================================
+cat("[INFO] Calculating RNA structural accessibility...\n")
+
+# Simple structural proxy: dinucleotide stacking energy (AU-rich = more accessible)
+# Real RNAfold requires system call - using simplified proxy
+calc_accessibility <- function(seq) {
+  if (is.na(seq) || seq == "" || nchar(seq) < 3) return(0.5)  # Return neutral value
+  seq_upper <- toupper(seq)
+  # AU content correlates with less structure (more accessible)
+  bases <- strsplit(seq_upper, "")[[1]]
+  au_content <- sum(bases %in% c("A", "T")) / length(bases)
+  # GC pairs form stronger structures
+  gc_matches <- gregexpr("GC|CG", seq_upper)[[1]]
+  gc_pairs <- ifelse(gc_matches[1] == -1, 0, length(gc_matches))
+  # Accessibility score: higher = more accessible
+  au_content - (gc_pairs / nchar(seq_upper))
+}
+
+# Calculate for 5'SS and 3'SS windows
+features$SS5_accessibility <- sapply(ss_seqs$ss5, calc_accessibility)
+features$SS3_accessibility <- sapply(ss_seqs$ss3, calc_accessibility)
+
+# =============================================================================
+# STEP 1J: Additional Sequence Features
+# =============================================================================
+
+# Impute NAs with median for numeric columns (instead of removing rows)
+cat("[INFO] Imputing missing values with column medians...\n")
+for (col in names(features)) {
+  if (col == "class") next
+  if (is.numeric(features[[col]])) {
+    na_count <- sum(is.na(features[[col]]))
+    if (na_count > 0) {
+      median_val <- median(features[[col]], na.rm = TRUE)
+      if (is.na(median_val)) median_val <- 0  # fallback
+      features[[col]][is.na(features[[col]])] <- median_val
+      cat(sprintf("[INFO] Imputed %d NAs in %s with %.2f\n", na_count, col, median_val))
+    }
+  }
+}
+
 cat(sprintf("[INFO] Feature matrix: %d introns x %d features\n", nrow(features), ncol(features) - 1))
+
+# Debug: check for remaining NAs
+na_cols <- sapply(features, function(x) sum(is.na(x)))
+if (any(na_cols > 0)) {
+  cat("[DEBUG] Columns with NAs after imputation:\n")
+  print(na_cols[na_cols > 0])
+}
+
+# Final cleanup: remove any rows still with NAs (edge cases)
+features <- features[complete.cases(features), ]
+cat(sprintf("[INFO] After NA cleanup: %d introns\n", nrow(features)))
+
+# If too few rows remain, skip complete.cases and use imputed data
+if (nrow(features) == 0) {
+  cat("[WARN] All rows had NAs - reloading and forcing zero imputation...\n")
+  # Reload features without the problematic complete.cases
+  features <- read_csv(file.path(opt$outdir, "feature_matrix_debug.csv"), show_col_types = FALSE)
+}
 
 # Save feature matrix
 write_csv(features, file.path(opt$outdir, "feature_matrix.csv"))
