@@ -209,36 +209,124 @@ features <- data.frame(
 )
 
 # =============================================================================
-# STEP 1C: Motif Features (SRSF3/PCBP2)
+# STEP 1C: Enhanced Motif Features (All SRSF + Top Enriched RBPs)
 # =============================================================================
-cat("[INFO] Scanning for SRSF3 (WCWWC) motifs...\n")
+cat("[INFO] Scanning for enriched RBP motifs...\n")
 
-# SRSF3 canonical: WCWWC (W = A/T)
-srsf3_pattern <- "([AT]C[AT][AT]C)"
+# Define motif patterns based on AME enrichment results (>5 fold in dependent)
+# Top enriched motifs from UFM1-dependent vs constitutive analysis
+motif_patterns <- list(
+  # SRSF Family
+  SRSF3 = "[AT]C[AT][AT]C",           # WCWWC
+  SRSF5 = "GC[GC]CC",                  # GCSCC
+  SRSF11 = "AGGGG",                    # AGGGG
+  SRSF1 = "GGAGG",                     # Canonical SRSF1
+  SRSF2 = "GGNG",                      # G-rich
+  SRSF7 = "GAYGAY",                    # GAC-based
+  
+  # PCBP Family (C-rich)
+  PCBP2 = "CCC+",                      # C-stretch
+  PCBP2_long = "CCCC[ACGT]CCCC",       # CCCCNCCCC
+  PCBP3 = "CC[AT][AT]CC",              # CCUWWCC
+  
+  # HNRNP Family (G-rich)
+  HNRNPH1 = "G[GT]GGGG",               # GKGGGG
+  HNRNPF = "GGGG[ACT]GGGG",            # GGGDGGGG
+  HNRNPA2B1 = "[AG]GGGG",              # RGGGG
+  
+  # Other Top Enriched
+  RBM25 = "GGGG[ACGT]G",               # GGGGNG
+  RBM6 = "CG[AT]CC[AC]",               # CGUCCM
+  RBM39 = "CC[CT]CC",                  # CCYCC
+  RBM24 = "GGGGG",                     # G-stretch
+  
+  # Additional splice-related
+  PTBP1 = "[CT]CTCCC",                 # Pyrimidine-rich
+  ESRP1 = "GGG[GT]GG"                  # GGGKGG
+)
 
-count_srsf3 <- function(seq) {
+# Generic motif counter
+count_motif <- function(seq, pattern) {
   if (is.na(seq) || nchar(seq) == 0) return(0)
-  length(gregexpr(srsf3_pattern, toupper(seq), perl = TRUE)[[1]])
-}
-
-features$SRSF3_count <- sapply(intron_seqs, count_srsf3)
-features$SRSF3_density <- features$SRSF3_count / (features$intron_length / 1000)
-
-# PCBP2 pattern: C-rich (CCUYCCC or UWCCC simplified as CCC+)
-pcbp2_pattern <- "CCC+"
-
-count_pcbp2 <- function(seq) {
-  if (is.na(seq) || nchar(seq) == 0) return(0)
-  matches <- gregexpr(pcbp2_pattern, toupper(seq), perl = TRUE)[[1]]
+  matches <- gregexpr(pattern, toupper(seq), perl = TRUE)[[1]]
   if (matches[1] == -1) return(0)
   length(matches)
 }
 
-features$PCBP2_count <- sapply(intron_seqs, count_pcbp2)
-features$PCBP2_density <- features$PCBP2_count / (features$intron_length / 1000)
+# Add all motif counts and densities
+cat("[INFO] Counting motifs (", length(motif_patterns), " patterns)...\n")
+
+for (motif_name in names(motif_patterns)) {
+  pattern <- motif_patterns[[motif_name]]
+  count_col <- paste0(motif_name, "_count")
+  density_col <- paste0(motif_name, "_density")
+  
+  features[[count_col]] <- sapply(intron_seqs, function(s) count_motif(s, pattern))
+  features[[density_col]] <- features[[count_col]] / (features$intron_length / 1000)
+}
 
 # =============================================================================
-# STEP 1D: Additional Features
+# STEP 1D: Splice Site Strength (MaxEntScan-like scoring)
+# =============================================================================
+cat("[INFO] Calculating splice site strength scores...\n")
+
+# Simplified SS scoring based on consensus matching
+score_5ss <- function(seq) {
+  # 5' SS consensus: GT at positions 1-2 of intron
+  if (is.na(seq) || nchar(seq) < 9) return(NA)
+  # Canonical 5'SS: [AC]AG|GT[AG]AGT (| is splice site)
+  # Score based on consensus match
+  score <- 0
+  seq_upper <- toupper(seq)
+  # Position 4-5 should be GT
+  if (substr(seq_upper, 4, 5) == "GT") score <- score + 5
+  if (substr(seq_upper, 6, 6) %in% c("A", "G")) score <- score + 2
+  if (substr(seq_upper, 3, 3) == "G") score <- score + 1
+  # GC content of region
+  gc <- sum(strsplit(seq_upper, "")[[1]] %in% c("G", "C")) / nchar(seq_upper)
+  score + gc * 3
+}
+
+score_3ss <- function(seq) {
+  # 3' SS consensus: Polypyrimidine tract + AG
+  if (is.na(seq) || nchar(seq) < 20) return(NA)
+  seq_upper <- toupper(seq)
+  score <- 0
+  # PPT in last 20bp
+  ppt_region <- substr(seq_upper, nchar(seq_upper) - 19, nchar(seq_upper) - 2)
+  ppt_content <- sum(strsplit(ppt_region, "")[[1]] %in% c("C", "T")) / nchar(ppt_region)
+  score <- ppt_content * 8
+  # AG at end
+  if (substr(seq_upper, nchar(seq_upper) - 1, nchar(seq_upper)) == "AG") score <- score + 4
+  score
+}
+
+features$SS5_score <- sapply(ss_seqs$ss5, score_5ss)
+features$SS3_score <- sapply(ss_seqs$ss3, score_3ss)
+
+# =============================================================================
+# STEP 1E: Branch Point Scoring
+# =============================================================================
+cat("[INFO] Scanning for branch point motifs...\n")
+
+# Branch point consensus: YNYURAC (Y=pyrimidine, N=any, R=purine)
+# Simplified as [CT][ACGT][CT][AT][AG]A[CT]
+bp_pattern <- "[CT][ACGT][CT][AT][AG]A[CT]"
+
+score_bp <- function(seq) {
+  if (is.na(seq) || nchar(seq) < 40) return(0)
+  # Search in -40 to -15 region before 3'SS
+  seq_upper <- toupper(seq)
+  bp_region <- substr(seq_upper, max(1, nchar(seq_upper) - 39), nchar(seq_upper) - 14)
+  matches <- gregexpr(bp_pattern, bp_region, perl = TRUE)[[1]]
+  if (matches[1] == -1) return(0)
+  length(matches)  # Number of potential BP motifs
+}
+
+features$BP_count <- sapply(intron_seqs, score_bp)
+
+# =============================================================================
+# STEP 1F: Additional Sequence Features
 # =============================================================================
 
 # CpG count
