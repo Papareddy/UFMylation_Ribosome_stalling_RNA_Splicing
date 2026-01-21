@@ -47,6 +47,24 @@ python3 run_pipeline.py --species human --event_types RI --dpsi 0.25 --outdir hs
 python3 run_pipeline.py --species human --event_types A3SS A5SS MXE RI --fdr 0.01 --steps 1 --outdir hs_allExceptSE_fdr0.01_dpsi0.1
 ```
 
+### Machine Learning Pipeline: Deep Feature Hunter
+-   **New Directory**: `machine_learning/`
+-   **Main Script**: `machine_learning/run_deep_feature_hunter.R`
+    -   Classifies UFM1-dependent vs independent introns using Random Forest.
+    -   **Feature Evolution**:
+        -   **v1**: Sequence composition (GC, PPT, CpG) and basic motifs (SRSF3, PCBP2).
+        -   **v2**: 45 features including all SRSF motifs, PCBP/HNRNP/RBM families, and Branch Point scoring.
+        -   **v3**: 53 features adding **Contextual/Kinetic** features (Upstream Exon GC, Codon Optimality, Decoy Competition, RNA Accessibility).
+    -   **Multi-Direction Analysis (FDR 0.05)**:
+        -   **dPSI Positive (CTRL > ANS)**: 443 introns. Anisomycin *decreases* retention (Kinetic Window Hypothesis). AUC 0.553.
+        -   **dPSI Negative (ANS > CTRL)**: 144 introns. Anisomycin *increases* retention (Blocking Hypothesis). AUC 0.607.
+    -   **Top Features**: `GC_intron`, `intron_length`, `PCBP2_density`, `SRSF3_density`, `upstream_exon_GC`.
+
+## Scientific Insights (Jan 21, 2026)
+1.  **Kinetic Window Hypothesis**: The majority of UFM1-dependent introns are "fast" introns that are normally retained because the ribosome moves too quickly. Anisomycin stalling "rescues" their splicing.
+2.  **RBP Coupling**: SRSF3 and PCBP2 density are consistently among the most discriminative features, suggesting these RBPs may be sensitive to ribosome-mediated splicing regulation.
+3.  **Predictability**: Introns inhibited by stalling (dPSI Negative) are more sequence-predictable (AUC 0.6) than those rescued by stalling (AUC 0.55).
+
 ## Key Outputs
 
 | Step | Output Directory | Key Files |
@@ -55,17 +73,7 @@ python3 run_pipeline.py --species human --event_types A3SS A5SS MXE RI --fdr 0.0
 | 10 | `step10_motif_analysis/` | AME results, motif comparison plots |
 | 14 | `step14_genomic_associations/` | miRNA, NMD, EJC/PTC, Feature Lengths |
 | 15 | `step15_subcellular_distribution/` | N/C shift plots, Expression boxplots |
-
-## dPSI Thresholds (Default)
-| Event Type | Threshold |
-|------------|-----------|
-| SE | ≥ 0.2 |
-| RI, A3SS, A5SS, MXE | ≥ 0.1 |
-
-## Next Steps for New Agent
-1.  Review `hs_RI_0.25/` results (stricter dPSI threshold analysis).
-2.  Review `functional_analysis/` for GO enrichment insights.
-3.  Consider extending Step 15/15B to Mouse data if expression data available.
+| ML | `machine_learning/outputs_v3/` | `Variable_Importance.png`, `ROC_Curve.pdf` |
 
 ## Maintenance Protocol
 1.  **Start**: Read this `HANDOFF.md`.
