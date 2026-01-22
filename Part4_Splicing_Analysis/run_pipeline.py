@@ -217,14 +217,14 @@ def main():
     step4_out = os.path.join(run_outdir, "step04_protein_sequence_impact")
     step4_annotated = os.path.join(step4_out, "annotated")  # Functional impact annotations
     step5_out = os.path.join(run_outdir, "step05_frameshift_density")
-    step4_out = os.path.join(run_outdir, "step04_aa_features")
-    step5_out = os.path.join(run_outdir, "step05_biophysical_properties")
-    step6_out = os.path.join(run_outdir, "step06_motif_analysis")
-    step7_out = os.path.join(run_outdir, "step07_mechanism_investigation")
-    step8_out = os.path.join(run_outdir, "step08_rna_maps")
-    step9_out = os.path.join(run_outdir, "step09_genomic_associations")
+    step6_out = os.path.join(run_outdir, "step06_aa_features")
+    step7_out = os.path.join(run_outdir, "step07_biophysical_properties")
+    step8_out = os.path.join(run_outdir, "step08_motif_analysis")
+    step9_out = os.path.join(run_outdir, "step09_mechanism_investigation")
+    step10_out = os.path.join(run_outdir, "step10_rna_maps")
+    step11_out = os.path.join(run_outdir, "step11_genomic_associations")
     
-    for d in [step1_out, step2_out, step3_out, step4_out, step5_out, step4_out, step5_out, step6_out, step7_out, step8_out, step9_out]:
+    for d in [step1_out, step2_out, step3_out, step4_out, step5_out, step6_out, step7_out, step8_out, step9_out, step10_out, step11_out]:
         os.makedirs(d, exist_ok=True)
     
     def should_run(step_num):
