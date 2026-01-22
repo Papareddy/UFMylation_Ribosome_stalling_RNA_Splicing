@@ -151,17 +151,16 @@ calculate_density <- function(gr, group_name, stop_df, window, tx_granges) {
   
   if (nrow(merged_filt) == 0) return(data.frame())
   
-  # Create density using histogram bins
-  breaks <- seq(-window, window, by=50)
+  # Create density using histogram bins (25bp bins as requested)
+  breaks <- seq(-window, window, by=25)
   counts <- hist(merged_filt$distance, breaks=breaks, plot=FALSE)$counts
-  mids <- breaks[-length(breaks)] + 25
+  mids <- breaks[-length(breaks)] + 12.5  # Center of 25bp bins
   
-  # Normalize by total number of introns in group
-  density_vals <- counts / length(gr)
-  
+  # Return both raw counts and normalized density
   data.frame(
     Position = mids,
-    Density = density_vals,
+    RawCounts = counts,
+    Density = counts / length(gr),
     Group = group_name
   )
 }
@@ -225,8 +224,12 @@ if (nrow(all_density) > 0) {
   
   dev.off()
   
-  # Save data
+  # Save normalized density data
   write_tsv(all_density, file.path(opt$outdir, "Anchored_StopCodon_IntronDensity.tsv"))
+  
+  # Save raw counts only (not normalized)
+  raw_counts_only <- all_density %>% select(Position, RawCounts, Group)
+  write_tsv(raw_counts_only, file.path(opt$outdir, "Anchored_StopCodon_RawCounts.tsv"))
   
   message("Done. Saved to: ", opt$outdir)
 } else {
