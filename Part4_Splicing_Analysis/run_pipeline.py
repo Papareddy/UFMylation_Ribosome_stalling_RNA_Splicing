@@ -975,6 +975,41 @@ def main():
          else:
              print(f"[WARN] Skipping Anchored Density: Step 6 Output ({per_event_file_local}) missing.")
 
+
+    # ===========================================================================
+    # STEP 12: PROTEIN PROPERTY METAGENE ANALYSIS (All Species)
+    # ===========================================================================
+    if should_run(12):
+        print("\n[INFO] === Step 12: Protein Property Metagene Analysis ===")
+        step12_out = os.path.join(run_outdir, "step12_protein_metagene")
+        os.makedirs(step12_out, exist_ok=True)
+        
+        dep_tsv = os.path.join(step1_out, "UFM1_dependent.tsv")
+        indep_tsv = os.path.join(step1_out, "UFM1_independent.tsv")
+        
+        if os.path.exists(dep_tsv) and os.path.exists(indep_tsv) and gtf_file and dna_fasta_file:
+            print(f"[INFO] Running protein metagene for {args.species}...")
+            import tempfile, subprocess
+            
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_dep.txt') as f:
+                dep_genes_file = f.name
+                subprocess.run(f"awk -F'\t' '{{print \}}' {dep_tsv} | tail -n +2 | sort -u > {dep_genes_file}", shell=True, check=True)
+            
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_indep.txt') as f:
+                indep_genes_file = f.name
+                subprocess.run(f "awk -F'\t' '{{print \}}' {indep_tsv} | tail -n +2 | sort -u > {indep_genes_file}", shell=True, check=True)
+            
+            cmd_12 = ["mamba", "run", "-n", "splicing-functional", "python",
+                     os.path.join(script_dir, "src/protein_properties_metagene.py"),
+                     "--gtf", gtf_file, "--genome", dna_fasta_file,
+                     "--dep_genes", dep_genes_file, "--indep_genes", indep_genes_file,
+                     "--outdir", step12_out, "--window", "30", "--step", "10", "--nbins", "100"]
+            _run_and_log(cmd_12, "step12_protein_metagene")
+            
+            os.unlink(dep_genes_file); os.unlink(indep_genes_file)
+        else:
+            print("[WARN] Skipping Protein Metagene: Missing files")
+
     # Step 11: Motif Target Identification & Subcellular Distribution (Human Only)
     if should_run(11):
         if args.species == "human":
