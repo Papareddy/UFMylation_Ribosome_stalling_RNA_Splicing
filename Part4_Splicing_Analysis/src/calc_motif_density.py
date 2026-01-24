@@ -24,7 +24,7 @@ def analyze_motif_density(fasta_file, group_label):
     data = []
     # SRSF5 Permissive (WCWWC) -> A/T, C, A/T, A/T, C
     # Or classic Cytosine-rich used in literature (TCCTC, CCTCC, etc.)
-    # Let's use the DREME/AME consensus we found: WCWWC 
+    # Let's use the Consensus we found: WCWWC 
     # W = A or T (Weak)
     # Actually wait. SRSF5 Consensus from CisBP (Human):
     # C-rich.

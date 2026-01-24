@@ -229,7 +229,7 @@ def main():
         write_beds(df, prefix)
         
         # 2. Extract Sequences
-        for kind in ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream']:
+        for kind in ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide']:
             bed = f"{prefix}.{kind}.bed"
             fa = f"{prefix}.{kind}.fa"
             # getfasta -s for strand specificity

@@ -86,16 +86,42 @@ def calculate_properties_window(seq, window_size=30, step=10):
     """Calculate ProtParam properties in sliding windows"""
     results = []
     
+    # Ensure sequence is string
+    seq = str(seq)
+    
     for i in range(0, len(seq) - window_size + 1, step):
         window = seq[i:i+window_size]
         
-        # Skip if too many X or non-standard AA
-        if window.count('X') > 3 or any(aa not in 'ACDEFGHIKLMNPQRSTVWY' for aa in window):
+        # Skip if too many non-standard AA
+        # Standard AA: ACDEFGHIKLMNPQRSTVWY
+        valid_aa = set('ACDEFGHIKLMNPQRSTVWY')
+        if any(aa not in valid_aa for aa in window):
             continue
         
         try:
             analyzer = ProteinAnalysis(window)
             
+            # Get secondary structure fractions
+            helix, turn, sheet = analyzer.secondary_structure_fraction()
+            
+            # Manually calculate Aliphatic Index (Ikai, 1980)
+            L = len(window)
+            mole_pct = {aa: (window.count(aa) / L) * 100 for aa in ['A', 'V', 'I', 'L']}
+            aliphatic_idx = mole_pct['A'] + (2.9 * mole_pct['V']) + (3.9 * (mole_pct['I'] + mole_pct['L']))
+            
+            # Flexibility (averaging the per-residue flexibility values)
+            # ProteinAnalysis.flexibility() returns a list of values
+            flex_vals = analyzer.flexibility()
+            avg_flex = np.mean(flex_vals) if flex_vals else np.nan
+            
+            # Kyte-Doolittle Hydropathy (This is what GRAVY uses, but adding specifically as requested)
+            kd_values = {
+                'A': 1.8, 'C': 2.5, 'D': -3.5, 'E': -3.5, 'F': 2.8, 'G': -0.4, 'H': -3.2,
+                'I': 4.5, 'K': -3.9, 'L': 3.8, 'M': 1.9, 'N': -3.5, 'P': -1.6, 'Q': -3.5,
+                'R': -4.5, 'S': -0.8, 'T': -0.7, 'V': 4.2, 'W': -0.9, 'Y': -1.3
+            }
+            kd_hydropathy = sum(kd_values.get(aa, 0) for aa in window) / L
+
             results.append({
                 'position': i + window_size/2,  # Center of window
                 'molecular_weight': analyzer.molecular_weight(),
@@ -103,16 +129,16 @@ def calculate_properties_window(seq, window_size=30, step=10):
                 'instability': analyzer.instability_index(),
                 'isoelectric_point': analyzer.isoelectric_point(),
                 'gravy': analyzer.gravy(),  # Hydropathy
-                'helix_fraction': analyzer.secondary_structure_fraction()[0],
-                'turn_fraction': analyzer.secondary_structure_fraction()[1],
-                'sheet_fraction': analyzer.secondary_structure_fraction()[2],
-                'charge_at_pH7': sum([
-                    window.count('K') + window.count('R') -  # Positive
-                    window.count('D') - window.count('E')     # Negative
-                ]) / len(window),
-                'aliphatic_index': analyzer.aliphatic_index(),
+                'helix_fraction': helix,
+                'turn_fraction': turn,
+                'sheet_fraction': sheet,
+                'charge_at_pH7': analyzer.charge_at_pH(7.0),
+                'aliphatic_index': aliphatic_idx,
+                'flexibility': avg_flex,
+                'kd_hydropathy': kd_hydropathy
             })
-        except:
+        except Exception as e:
+            # Silent skip but log once if needed
             continue
     
     return pd.DataFrame(results)
@@ -122,16 +148,20 @@ def normalize_to_metagene(df_list, nbins=100):
     metagene_data = defaultdict(list)
     
     for df in df_list:
-        if df.empty: continue
+        if df is None or df.empty: continue
         
         # Normalize positions to 0-1
+        # Use a small epsilon to avoid potential cut issues at 1.0
         df['rel_pos'] = df['position'] / df['position'].max()
         
-        # Bin into 100 bins
-        df['bin'] = pd.cut(df['rel_pos'], bins=nbins, labels=False)
+        # Bin into nbins
+        df['bin'] = pd.cut(df['rel_pos'], bins=np.linspace(0, 1, nbins + 1), labels=False, include_lowest=True)
         
         # Average per bin
         binned = df.groupby('bin').mean()
+        
+        # KEY FIX: Ensure all bins from 0 to nbins-1 are present, even if empty
+        binned = binned.reindex(range(nbins))
         
         for col in binned.columns:
             if col not in ['position', 'rel_pos', 'bin']:
@@ -140,10 +170,16 @@ def normalize_to_metagene(df_list, nbins=100):
     # Average across all proteins
     result = {}
     for prop, values in metagene_data.items():
-        stacked = np.array([v for v in values if len(v) == nbins])
-        if len(stacked) > 0:
-            result[prop] = np.nanmean(stacked, axis=0)
-            result[f'{prop}_sem'] = np.nanstd(stacked, axis=0) / np.sqrt(len(stacked))
+        if not values: continue
+        
+        stacked = np.array(values)
+        # Use nanmean to ignore bins without data for specific proteins
+        result[prop] = np.nanmean(stacked, axis=0)
+        
+        # Handle cases where all entries in a bin are NaN to avoid warnings
+        n_valid = np.sum(~np.isnan(stacked), axis=0)
+        n_valid[n_valid == 0] = 1 # Avoid division by zero
+        result[f'{prop}_sem'] = np.nanstd(stacked, axis=0) / np.sqrt(n_valid)
     
     return result
 
@@ -265,10 +301,11 @@ def main():
     
     # Plot
     print("\nGenerating plots...")
-    properties = ['gravy', 'aromaticity', 'instability', 'isoelectric_point', 
-                  'charge_at_pH7', 'helix_fraction', 'sheet_fraction', 'aliphatic_index']
+    properties = ['gravy', 'kd_hydropathy', 'aromaticity', 'instability', 
+                  'isoelectric_point', 'charge_at_pH7', 'aliphatic_index',
+                  'flexibility', 'helix_fraction', 'sheet_fraction']
     
-    fig, axes = plt.subplots(4, 2, figsize=(14, 16))
+    fig, axes = plt.subplots(5, 2, figsize=(14, 20))
     axes = axes.flatten()
     
     x = np.linspace(0, 100, args.nbins)
