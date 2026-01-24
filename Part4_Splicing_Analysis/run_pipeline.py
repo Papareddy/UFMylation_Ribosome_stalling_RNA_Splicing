@@ -117,10 +117,11 @@ def main():
     LOG_DIR = os.path.join(args.outdir, "logs")
     os.makedirs(LOG_DIR, exist_ok=True)
     
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    script_dir = os.path.join(project_root, "src")
     
     # --- File Detection & Setup ---
-    data_dir = os.path.join(script_dir, "data", args.species)
+    data_dir = os.path.join(project_root, "data", args.species)
     # Input Directories
     # Input Directories
     if args.species == 'mouse':
@@ -191,9 +192,9 @@ def main():
     # --- Set Default Motif DB (CisBP) if not provided ---
     if not args.motif_db:
         motif_map = {
-            "human": os.path.join(script_dir, "data/motifs/CisBP_Human_All.meme"),
-            "mouse": os.path.join(script_dir, "data/motifs/CisBP_Mouse_All.meme"),
-            "arabidopsis": os.path.join(script_dir, "data/motifs/CisBP_Arabidopsis_All.meme")
+            "human": os.path.join(project_root, "data/motifs/CisBP_Human_All.meme"),
+            "mouse": os.path.join(project_root, "data/motifs/CisBP_Mouse_All.meme"),
+            "arabidopsis": os.path.join(project_root, "data/motifs/CisBP_Arabidopsis_All.meme")
         }
         
         default_db = motif_map.get(args.species.lower())
@@ -240,7 +241,7 @@ def main():
         # Note: wt_dir and ufm_dir detection above might fail if data dir strcuture is different.
         # But we assume standard structure.
         event_types_str = ",".join(args.event_types)
-        _run_and_log(["mamba", "run", "-n", "splicing-functional", "Rscript", os.path.join(script_dir, "src/prepare_rmats_data.R"), 
+        _run_and_log(["mamba", "run", "-n", "splicing-functional", "Rscript", os.path.join(script_dir, "prepare_rmats_data.R"), 
                         f"--wt_dir={wt_dir}", f"--ufm_dir={ufm_dir}", f"--outdir={step1_out}", 
                         f"--fdr={args.fdr}", f"--dpsi={args.dpsi}", f"--min_reads={args.min_reads}",
                         f"--event_types={event_types_str}"], "step01_data_prep")
@@ -248,7 +249,7 @@ def main():
         # Automatically export BED/RDS for downstream use (Moved from old Step 14)
         print("[INFO] === Step 1: Exporting Events (BED/RDS) ===")
         cmd_export = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                    os.path.join(script_dir, "src/export_events.R"),
+                    os.path.join(script_dir, "export_events.R"),
                     "--dependent", os.path.join(step1_out, "UFM1_dependent.tsv"),
                     "--independent", os.path.join(step1_out, "UFM1_independent.tsv"),
                     "--outdir", step1_out] # Save directly in Step 1 output
@@ -281,7 +282,7 @@ def main():
         if os.path.exists(domain_input):
             print("[INFO] === Step 2: Domain Enrichment Plotting ===")
             enrich_cmd = ["mamba", "run", "-n", "splicing-functional", "python3",
-                          os.path.join(script_dir, "src/analyze_domain_enrichment.py"),
+                          os.path.join(script_dir, "analyze_domain_enrichment.py"),
                           f"--enrichment={domain_input}",
                           f"--fdr={args.fdr_domain}",
                           f"--outfile={os.path.join(step2_out, 'Volcano_Domain_Enrichment_Comparison.png')}"]
@@ -294,7 +295,7 @@ def main():
         
         if os.path.exists(biophys_input):
             bio_cmd = ["mamba", "run", "-n", "splicing-functional", "python3",
-                       os.path.join(script_dir, "src/analyze_domain_enrichment.py"),
+                       os.path.join(script_dir, "analyze_domain_enrichment.py"),
                        f"--enrichment={biophys_input}",
                        f"--fdr={args.fdr_domain}",
                        "--protein-attributes",
@@ -307,7 +308,7 @@ def main():
         print("[INFO] === Step 4: Functional Impact Classification ===")
         os.makedirs(step4_annotated, exist_ok=True)  # Create annotated subdirectory
         _run_and_log(["mamba", "run", "-n", "splicing-functional", "python3", 
-                        os.path.join(script_dir, "src/splicing_functional_impat.py"), 
+                        os.path.join(script_dir, "splicing_functional_impat.py"), 
                         "--lost_table", os.path.join(step1_out, "UFM1_dependent.tsv"), 
                         "--preserved_table", os.path.join(step1_out, "UFM1_independent.tsv"), 
                         "--gtf", gtf_file, "--outdir", step4_annotated, "--advanced"], "step04_functional_impact")
@@ -363,7 +364,7 @@ def main():
 
         # Always run Step 6 to generate per-event tables needed for Step 7.
         cmd6 = ["mamba", "run", "-n", "splicing-functional", "python3", 
-                os.path.join(script_dir, "src/protein_primary_sequence_impact.py"), 
+                os.path.join(script_dir, "protein_primary_sequence_impact.py"), 
                 "--inputs"] + inputs_arg + ["--outdir", step4_out]
         
         if prot_fasta_file and not args.no_fasta:
@@ -377,7 +378,7 @@ def main():
         per_event_file = os.path.join(step4_out, "per_event_compact_for_plotting.tsv")
         if os.path.exists(per_event_file):
             plot_output_file = os.path.join(step4_out, "impact_fractions.png")
-            cmd6b = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/plot_impact_fractions.py"), "--per_event_file", per_event_file, "--output_file", plot_output_file]
+            cmd6b = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "plot_impact_fractions.py"), "--per_event_file", per_event_file, "--output_file", plot_output_file]
             _run_and_log(cmd6b, "step04_plot_impact_fractions")
             
             # RI Distribution Plot
@@ -389,12 +390,12 @@ def main():
                bg_file = os.path.join(run_outdir, "genome_RI_background_counts.tsv")
                if not os.path.exists(bg_file): # Or always regen?
                    print("[INFO] Generating Genome-wide RI Background...")
-                   cmd_bg = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/generate_genomic_RI_background.py"), "--gtf", gtf_file, "--out_tsv", bg_file]
+                   cmd_bg = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "generate_genomic_RI_background.py"), "--gtf", gtf_file, "--out_tsv", bg_file]
                    _run_and_log(cmd_bg, "step04_generate_background")
                
                print("[INFO] Plotting RI Odds Ratios and Saving Stats Table...")
                stats_file = os.path.join(step4_out, "RI_Position_Stats.tsv")
-               cmd6c = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/plot_RI_distribution.py"), "--per_event_file", per_event_file, "--output_file", ri_plot_file, "--background_counts", bg_file, "--stats_table", stats_file]
+               cmd6c = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "plot_RI_distribution.py"), "--per_event_file", per_event_file, "--output_file", ri_plot_file, "--background_counts", bg_file, "--stats_table", stats_file]
                _run_and_log(cmd6c, "step04_plot_RI_distribution")
 
             # SE Distribution Plot
@@ -406,12 +407,12 @@ def main():
                bg_file_se = os.path.join(run_outdir, "genome_SE_background_counts.tsv")
                if not os.path.exists(bg_file_se): 
                    print("[INFO] Generating Genome-wide SE Background (Exons)...")
-                   cmd_bg_se = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/generate_genomic_SE_background.py"), "--gtf", gtf_file, "--out_tsv", bg_file_se]
+                   cmd_bg_se = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "generate_genomic_SE_background.py"), "--gtf", gtf_file, "--out_tsv", bg_file_se]
                    _run_and_log(cmd_bg_se, "step04_generate_se_background")
                
                print("[INFO] Plotting SE Odds Ratios and Saving Stats Table...")
                stats_file_se = os.path.join(step4_out, "SE_Position_Stats.tsv")
-               cmd6d = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/plot_SE_distribution.py"), "--per_event_file", per_event_file, "--output_file", se_plot_file, "--background_counts", bg_file_se, "--stats_table", stats_file_se]
+               cmd6d = ["mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "plot_SE_distribution.py"), "--per_event_file", per_event_file, "--output_file", se_plot_file, "--background_counts", bg_file_se, "--stats_table", stats_file_se]
                _run_and_log(cmd6d, "step04_plot_SE_distribution")
 
     # Anchored Density Analysis moved to Step 14 as per user request
@@ -425,7 +426,7 @@ def main():
         input_step7 = os.path.join(step4_out, "per_event_compact_for_plotting.tsv")
         if os.path.exists(input_step7):
             cmd_base = [
-                "mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "src/add_frame_shify_density.py"),
+                "mamba", "run", "-n", "splicing-functional", "python3", os.path.join(script_dir, "add_frame_shify_density.py"),
                 "--per_event", input_step7, "--gtf", gtf_file,
                 "--normalize", args.normalize, "--nperm", args.nperm, "--nbins", args.nbins,
                 "--bin_stats", "--annotate_binstats", "--overlay_datasets", "--one_plot_per_class",
@@ -456,7 +457,7 @@ def main():
         if dna_fasta_file:
             print("[INFO] === Step 6: Extracting AA Features ===")
             aa_features_cmd = ["mamba", "run", "-n", "splicing-functional", "bash", 
-                               os.path.join(script_dir, "src/AAfeatures.sh"), 
+                               os.path.join(script_dir, "AAfeatures.sh"), 
                                "--lost", os.path.join(step1_out, "UFM1_dependent.tsv"), 
                                "--preserved", os.path.join(step1_out, "UFM1_independent.tsv"), 
                                "-g", dna_fasta_file, 
@@ -475,7 +476,7 @@ def main():
         # Actually Step 9 takes input from Step 8 output.
         print("[INFO] === Step 7: Computing Protein Attributes (Biophysical Properties) ===")
         biophys_cmd = ["mamba", "run", "-n", "splicing-functional", "python3", 
-                       os.path.join(script_dir, "src/biophysical_properties.py"),
+                       os.path.join(script_dir, "biophysical_properties.py"),
                        "--indir", step6_out,
                        "--out_tsv", os.path.join(step7_out, "protein_attributes_properties.tsv")]
         _run_and_log(biophys_cmd, "step07_protein_attributes_calc")
@@ -488,11 +489,11 @@ def main():
             os.makedirs(step8_out, exist_ok=True)
             
             # Generate SRSF3_SRp20 Seqlogo
-            custom_meme = os.path.join(script_dir, "data/motifs/custom_SRSF3_SRSF7.meme")
+            custom_meme = os.path.join(project_root, "data/motifs/custom_SRSF3_SRSF7.meme")
             if os.path.exists(custom_meme):
                 print("[INFO] Generating SRSF3_SRp20 Sequence Logo...")
                 cmd_logo = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                            os.path.join(script_dir, "src/plot_custom_logo.R"),
+                            os.path.join(script_dir, "plot_custom_logo.R"),
                             custom_meme,
                             os.path.join(step8_out, "SRSF3_SRp20_logo.pdf")]
                 _run_and_log(cmd_logo, "step08_srsf3_logo")
@@ -530,7 +531,7 @@ def main():
                      
                      # 10A: Extract Sequences
                      cmd_10a = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                os.path.join(script_dir, "src/extract_ri_motifs.py"),
+                                os.path.join(script_dir, "extract_ri_motifs.py"),
                                 "--lost", l_path,
                                 "--preserved", p_path,
                                 "--genome_fasta", dna_fasta_file,
@@ -543,7 +544,7 @@ def main():
                      
                      if os.path.exists(lost_fa) and os.path.exists(pres_fa) and gtf_file:
                           cmd_10b = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                    os.path.join(script_dir, "src/analyze_ri_vs_constitutive.py"),
+                                    os.path.join(script_dir, "analyze_ri_vs_constitutive.py"),
                                     "--gtf", gtf_file,
                                     "--genome_fasta", dna_fasta_file,
                                     "--lost_tsv", l_path,
@@ -551,7 +552,7 @@ def main():
                                     "--lost_fa", lost_fa,
                                     "--preserved_fa", pres_fa,
                                     "--outdir", step10_ri_out,
-                                    "--script_dir", os.path.join(script_dir, "src")]
+                                    "--script_dir", script_dir]
                           
                           if args.motif_db:
                               cmd_10b.append(f"--motif_db={args.motif_db}")
@@ -592,7 +593,7 @@ def main():
                      
                      # 1. Extract Sequences
                      cmd_se_a = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                os.path.join(script_dir, "src/extract_se_motifs.py"),
+                                os.path.join(script_dir, "extract_se_motifs.py"),
                                 "--lost", l_path,
                                 "--preserved", p_path,
                                 "--genome_fasta", dna_fasta_file,
@@ -605,7 +606,7 @@ def main():
                      
                      if os.path.exists(lost_prefix + ".exon.fa") and os.path.exists(pres_prefix + ".exon.fa"):
                          cmd_se_b = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                    os.path.join(script_dir, "src/analyze_se_vs_constitutive.py"),
+                                    os.path.join(script_dir, "analyze_se_vs_constitutive.py"),
                                     "--gtf", gtf_file,
                                     "--genome_fasta", dna_fasta_file,
                                     "--lost_tsv", l_path,
@@ -613,7 +614,7 @@ def main():
                                     "--lost_prefix", lost_prefix,
                                     "--preserved_prefix", pres_prefix,
                                     "--outdir", step10_se_out,
-                                    "--script_dir", os.path.join(script_dir, "src")]
+                                    "--script_dir", script_dir]
                          
                          if args.motif_db:
                              cmd_se_b.append(f"--motif_db={args.motif_db}")
@@ -634,14 +635,14 @@ def main():
                 os.makedirs(step10_ese_out, exist_ok=True)
                 
                 # Get motif database
-                motif_db = getattr(args, 'motif_db', os.path.join(script_dir, "data/motifs/CisBP_Human_All.meme"))
+                motif_db = getattr(args, 'motif_db', os.path.join(project_root, "data/motifs/CisBP_Human_All.meme"))
                 if args.species.lower() == "mouse":
-                    motif_db = os.path.join(script_dir, "data/motifs/CisBP_Mouse_All.meme")
+                    motif_db = os.path.join(project_root, "data/motifs/CisBP_Mouse_All.meme")
                 elif args.species.lower() == "arabidopsis":
-                    motif_db = os.path.join(script_dir, "data/motifs/CisBP_Arabidopsis_All.meme")
+                    motif_db = os.path.join(project_root, "data/motifs/CisBP_Arabidopsis_All.meme")
                 
                 ese_cmd = ["mamba", "run", "-n", "splicing-functional", "python3",
-                           os.path.join(script_dir, "src/run_ese_analysis.py"),
+                           os.path.join(script_dir, "run_ese_analysis.py"),
                            "--events_rds", os.path.join(step1_out, "UFM1_events_rich.rds"),
                            "--genome_fasta", dna_fasta_file,
                            "--gtf", gtf_file,
@@ -716,7 +717,7 @@ def main():
                      
                      # 1. Stalling
                      cmd_11a = ["mamba", "run", "-n", "splicing-functional", "python3", 
-                                os.path.join(script_dir, "src/analyze_stalling_motifs.py"),
+                                os.path.join(script_dir, "analyze_stalling_motifs.py"),
                                 "--groups"] + valid_groups + ["--outdir", out_subdir]
                      _run_and_log(cmd_11a, f"step09_a_stalling_{etype}_{direction}")
                      
@@ -725,7 +726,7 @@ def main():
                      if len(input_cands) >= 2 and os.path.exists(input_cands[0][1]) and os.path.exists(input_cands[1][1]):
                           print(f"[INFO] Step 11C ({etype}_{direction}): Running Sequence Property Check...")
                           cmd_11c = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                     os.path.join(script_dir, "src/check_gc_len.py"),
+                                     os.path.join(script_dir, "check_gc_len.py"),
                                      "--lost", input_cands[0][1],
                                      "--preserved", input_cands[1][1]]
                           _run_and_log(cmd_11c, f"step09_c_seq_properties_{etype}_{direction}")
@@ -742,7 +743,7 @@ def main():
              adj_out = os.path.join(step9_out, "adjacency")
              os.makedirs(adj_out, exist_ok=True)
              cmd_11b = ["mamba", "run", "-n", "splicing-functional", "python3", 
-                        os.path.join(script_dir, "src/analyze_se_ri_adjacency.py"),
+                        os.path.join(script_dir, "analyze_se_ri_adjacency.py"),
                         "--se_files", l_path, p_path,
                         "--ri_files", l_path, p_path,
                         "--outdir", adj_out]
@@ -785,7 +786,7 @@ def main():
 
              if os.path.exists(lost_path) and os.path.exists(preserved_path):
                  cmd_12 = ["mamba", "run", "-n", "splicing-functional", "python3",
-                           os.path.join(script_dir, "src/plot_rna_map.py"),
+                           os.path.join(script_dir, "plot_rna_map.py"),
                            "--lost", lost_path,
                            "--preserved", preserved_path,
                            "--genome", dna_fasta_file,
@@ -824,7 +825,7 @@ def main():
              print(f"[WARN] Step 14 Input {events_rds} missing! Did Step 1 run? Attempting to generate it now...")
              # Fallback: Run export if missing
              cmd_14 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                    os.path.join(script_dir, "src/export_events.R"),
+                    os.path.join(script_dir, "export_events.R"),
                     "--dependent", os.path.join(step1_out, "UFM1_dependent.tsv"),
                     "--independent", os.path.join(step1_out, "UFM1_independent.tsv"),
                     "--outdir", step1_out]
@@ -843,7 +844,7 @@ def main():
                  os.makedirs(mirna_out, exist_ok=True)
                  
                  cmd_14a = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                            os.path.join(script_dir, "src/analyze_mirna_isoforms.R"),
+                            os.path.join(script_dir, "analyze_mirna_isoforms.R"),
                             "--gtf", gtf_file,
                             "--fasta", dna_fasta_file,
                             "--events", events_rds,
@@ -860,7 +861,7 @@ def main():
              
              # Risk & Length
              cmd_14b1 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                         os.path.join(script_dir, "src/analyze_nmd_features.R"),
+                         os.path.join(script_dir, "analyze_nmd_features.R"),
                          "--gtf", gtf_file,
                          "--events", events_rds,
                          "--outdir", nmd_out]
@@ -868,7 +869,7 @@ def main():
              
              # Metagene Plot
              cmd_14b2 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                         os.path.join(script_dir, "src/plot_nmd_metagene.R"),
+                         os.path.join(script_dir, "plot_nmd_metagene.R"),
                          "--gtf", gtf_file,
                          "--events", events_rds,
                          "--outdir", nmd_out]
@@ -880,7 +881,7 @@ def main():
              os.makedirs(feat_len_out, exist_ok=True)
              
              cmd_14b3 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                         os.path.join(script_dir, "src/analyze_feature_lengths.R"),
+                         os.path.join(script_dir, "analyze_feature_lengths.R"),
                          "--gtf", gtf_file,
                          "--events", events_rds,
                          "--outdir", feat_len_out]
@@ -889,7 +890,7 @@ def main():
              # EJC + PTC Analysis
              print("[INFO] Step 14B-4: EJC & PTC Analysis...")
              cmd_14b4 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                         os.path.join(script_dir, "src/EJC_PTC.R"),
+                         os.path.join(script_dir, "EJC_PTC.R"),
                          "--gtf", gtf_file,
                          "--fasta", dna_fasta_file,
                          "--events", events_rds,
@@ -899,7 +900,7 @@ def main():
              # Anchored Stop Codon Intron Density
              print("[INFO] Step 14B-5: Anchored Stop Codon Intron Density...")
              cmd_14b5 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                         os.path.join(script_dir, "src/anchored_stopcodon_intron_density.R"),
+                         os.path.join(script_dir, "anchored_stopcodon_intron_density.R"),
                          "--gtf", gtf_file,
                          "--events", events_rds,
                          "--outdir", nmd_out,
@@ -912,17 +913,17 @@ def main():
              os.makedirs(step14_3ss_out, exist_ok=True)
              
              cmd_14b6_extract = ["mamba", "run", "-n", "splicing-functional", "python3",
-                                os.path.join(script_dir, "src/extract_3ss_sequences.py"),
+                                os.path.join(script_dir, "extract_3ss_sequences.py"),
                                 "--lost", os.path.join(step1_out, "UFM1_dependent.tsv"),
                                 "--preserved", os.path.join(step1_out, "UFM1_independent.tsv"),
                                 "--gtf", gtf_file,
                                 "--genome_fasta", dna_fasta_file,
                                 "--outdir", step14_3ss_out,
-                                "--script_dir", os.path.join(script_dir, "src")]
+                                "--script_dir", script_dir]
              _run_and_log(cmd_14b6_extract, "step14b_extract_3ss")
 
              cmd_14b6_plot = ["mamba", "run", "-n", "splicing-functional", "Rscript",
-                             os.path.join(script_dir, "src/plot_3ss_logo.R"),
+                             os.path.join(script_dir, "plot_3ss_logo.R"),
                              "--dep", os.path.join(step14_3ss_out, "UFM1_dependent.3ss_20bp.fa"),
                              "--indep", os.path.join(step14_3ss_out, "UFM1_independent.3ss_20bp.fa"),
                              "--const", os.path.join(step14_3ss_out, "Constitutive.3ss_20bp.fa"),
@@ -943,7 +944,7 @@ def main():
 
              if os.path.exists(dependent_tsv) and os.path.exists(independent_tsv):
                  cmd_gc = ["mamba", "run", "-n", "splicing-functional", "python3",
-                           os.path.join(script_dir, "src/analyze_anchored_intron_gc.py"),
+                           os.path.join(script_dir, "analyze_anchored_intron_gc.py"),
                            "--dependent", dependent_tsv,
                            "--independent", independent_tsv,
                            "--gtf", gtf_file,
@@ -965,7 +966,7 @@ def main():
              out_filepath = os.path.join(step11_out, out_filename) 
              
              cmd_dens = ["mamba", "run", "-n", "splicing-functional", "python3",
-                         os.path.join(script_dir, "src/analyze_anchored_density.py"),
+                         os.path.join(script_dir, "analyze_anchored_density.py"),
                          "--input_table", per_event_file_local,
                          "--gtf", gtf_file,
                          "--outdir", step11_out,
@@ -993,14 +994,14 @@ def main():
             
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_dep.txt') as f:
                 dep_genes_file = f.name
-                subprocess.run(f"awk -F'\t' '{{print \}}' {dep_tsv} | tail -n +2 | sort -u > {dep_genes_file}", shell=True, check=True)
+                subprocess.run(f"awk -F'\\t' '{{print $2}}' {dep_tsv} | tail -n +2 | sort -u > {dep_genes_file}", shell=True, check=True)
             
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='_indep.txt') as f:
                 indep_genes_file = f.name
-                subprocess.run(f "awk -F'\t' '{{print \}}' {indep_tsv} | tail -n +2 | sort -u > {indep_genes_file}", shell=True, check=True)
+                subprocess.run(f"awk -F'\\t' '{{print $2}}' {indep_tsv} | tail -n +2 | sort -u > {indep_genes_file}", shell=True, check=True)
             
             cmd_12 = ["mamba", "run", "-n", "splicing-functional", "python",
-                     os.path.join(script_dir, "src/protein_properties_metagene.py"),
+                     os.path.join(script_dir, "protein_properties_metagene.py"),
                      "--gtf", gtf_file, "--genome", dna_fasta_file,
                      "--dep_genes", dep_genes_file, "--indep_genes", indep_genes_file,
                      "--outdir", step12_out, "--window", "30", "--step", "10", "--nbins", "100"]
@@ -1010,43 +1011,66 @@ def main():
         else:
             print("[WARN] Skipping Protein Metagene: Missing files")
 
-    # Step 11: Motif Target Identification & Subcellular Distribution (Human Only)
-    if should_run(11):
-        if args.species == "human":
-            print("[INFO] === Step 11: Motif Target Identification & Subcellular Distribution ===")
-            step15_out = os.path.join(run_outdir, "step15_subcellular_distribution")
-            os.makedirs(step15_out, exist_ok=True)
-            
-            # Check for required inputs
-            dependent_tsv = os.path.join(step1_out, "UFM1_dependent.tsv")
-            independent_tsv = os.path.join(step1_out, "UFM1_independent.tsv")
-            expression_file = os.path.join(data_dir, "ForExport_Human_project_salmon.merged.gene_tpm.tsv")
-            step8_out_dir = os.path.join(run_outdir, "step08_motif_analysis")
-            ame_dir = os.path.join(step8_out_dir, "RI_DeepDive_combined")
-            intron_fasta = os.path.join(ame_dir, "UFM1_dependent.intron.fa")
-            
-            if os.path.exists(dependent_tsv) and os.path.exists(independent_tsv) and os.path.exists(expression_file):
-                cmd_15 = ["mamba", "run", "-n", "splicing-functional", "python3",
-                          os.path.join(script_dir, "src/step15_motif_subcellular.py"),
-                          "--ame_dir", ame_dir,
-                          "--dependent_tsv", dependent_tsv,
-                          "--independent_tsv", independent_tsv,
-                          "--expression_file", expression_file,
-                          "--outdir", step15_out]
-                
-                if os.path.exists(intron_fasta):
-                    cmd_15.extend(["--intron_fasta", intron_fasta])
-                
-                _run_and_log(cmd_15, "step15_subcellular")
-            else:
-                missing = []
-                if not os.path.exists(dependent_tsv): missing.append("dependent_tsv")
-                if not os.path.exists(independent_tsv): missing.append("independent_tsv")
-                if not os.path.exists(expression_file): missing.append("expression_file")
-                print(f"[WARN] Skipping Step 11: Missing inputs: {', '.join(missing)}")
+
+    # ===========================================================================
+    # STEP 13: SUBCELLULAR LOCALIZATION ENRICHMENT (All Species)
+    # ===========================================================================
+    if should_run(13):
+        print("\n[INFO] === Step 13: Subcellular Localization Enrichment ===")
+        step13_out = os.path.join(run_outdir, "step13_subcellular_localization")
+        os.makedirs(step13_out, exist_ok=True)
+        
+        events_rds = os.path.join(step1_out, "UFM1_events_rich.rds")
+        
+        if os.path.exists(events_rds):
+            print(f"[INFO] Running subcellular localization for {args.species}...")
+            cmd_13 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                     os.path.join(script_dir, "analyze_subcellular_localization.R"),
+                     "--species", args.species,
+                     "--rds", events_rds,
+                     "--outdir", step13_out]
+            _run_and_log(cmd_13, "step13_subcellular_localization")
         else:
-            print(f"[INFO] Step 15 is only available for Human species. Skipping for {args.species}.")
-    
+            print(f"[WARN] Skipping Step 13: Missing RDS file ({events_rds})")
+
+
+    # ===========================================================================
+    # STEP 14: GO ENRICHMENT ANALYSIS (BP & MF)
+    # ===========================================================================
+    if should_run(14):
+        print("\n[INFO] === Step 14: GO Enrichment Analysis (BP & MF) ===")
+        step14_out = os.path.join(run_outdir, "step14_go_enrichment")
+        os.makedirs(step14_out, exist_ok=True)
+        
+        events_rds = os.path.join(step1_out, "UFM1_events_rich.rds")
+        
+        if os.path.exists(events_rds):
+            print(f"[INFO] Running GO enrichment for {args.species}...")
+            cmd_14 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                     os.path.join(script_dir, "analyze_go_enrichment.R"),
+                     "--species", args.species,
+                     "--rds", events_rds,
+                     "--outdir", step14_out]
+            _run_and_log(cmd_14, "step14_go_enrichment")
+        else:
+            print(f"[WARN] Skipping Step 14: Missing RDS file ({events_rds})")
+
+    # ===========================================================================
+    # STEP 15: CROSS-SPECIES CONSERVATION ANALYSIS (Eukaryotic GO Landscape)
+    # ===========================================================================
+    if should_run(15):
+        print("\n[INFO] === Step 15: Cross-Species Conservation Analysis ===")
+        viz_out = os.path.join(args.outdir, "Cross_species_conservation")
+        
+        # This script performs the refined Eukaryotic Landscape analysis
+        # capturing conserved functional themes across Human, Mouse, and Arabidopsis.
+        cmd_15 = ["mamba", "run", "-n", "splicing-functional", "Rscript",
+                 os.path.join(script_dir, "plot_eukaryotic_go_landscape.R"),
+                 "--outdir", viz_out,
+                 "--results_dir", args.outdir]
+        
+        _run_and_log(cmd_15, "step15_cross_species_conservation")
+
     print("       PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60 + "\n")
     print(f"Results are available in: {run_outdir}")
