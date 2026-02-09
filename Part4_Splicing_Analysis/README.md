@@ -1,14 +1,6 @@
 # UFM1 Splicing Functional Impact Pipeline
 
-This repository contains a comprehensive analytical pipeline for defining the **UFM1-dependent splicing program** and its evolutionary conservation across the eukaryotic kingdom (**Human**, **Mouse**, **Arabidopsis**).
-
-## Overview
-
-The project has evolved from a mammalian analysis into a unified **Eukaryotic Hub**, revealing a fundamental split in the cellular response to ribosome stalling:
-
-1. **UFM1-Dependent ("ER Architects")**: Splicing specifically remodels the ER environment and lipid membranes (e.g., `ESYT1`, `TAFAZZIN`).
-2. **UFM1-Independent ("Core OS")**: Housekeeping maintenance (e.g., RNA Splicing factors) is universally conserved but independent of UFM1 stress.
-3. **Signal Peptide Eraser**: UFM1-dependent splicing acts as a functional switch with 100% penetrance, systematically stripping Signal Peptides from targeted transcripts.
+This repository contains an analytical pipeline for alternative splicing analysis in **Human**, **Mouse**, and **Arabidopsis**.
 
 ---
 
@@ -144,18 +136,7 @@ The pipeline consists of multiple steps organized into functional phases:
 
 ---
 
-## Key Scientific Findings
 
-### 1. Conserved ER Sectors
-The 3-species landscape identifies **ER Organization** and **Lipid Metabolism** as universal eukaryotic targets of UFM1-dependent splicing. This suggests UFM1-mediated splicing is an ancient mechanism for protecting the secretory factory.
-
-### 2. Signal Peptide Erasing (100% Penetrance)
-Analysis reveals that 100% of Retained Intron (RI) isoforms derived from Signal Peptide-positive UFM1-dependent genes in Human and Mouse lose their signal peptide. This confirms splicing is used to systematically reroute proteins away from the ER during stress.
-
-### 3. Splicing Factors Autoregulation
-Baseline splicing machinery (e.g., `SF3B1`, `SRSF4`) is a conserved target in the UFM1-independent group, likely representing a universal homeostatic mechanism to brake RNA processing during ribosome stalling.
-
----
 
 ## Output Files
 

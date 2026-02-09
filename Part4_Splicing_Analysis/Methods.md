@@ -22,6 +22,24 @@ De novo and known motif enrichment was performed using the Analysis of Motif Enr
 
 To assess the functional consequences of alternative splicing, we mapped splicing events to protein domain annotations using biomaRt^8^ to query Ensembl proteome data and InterPro domain coordinates. For each event, we determined whether the alternative region overlapped with annotated functional domains and classified events by predicted functional impact: frame-preserving (multiple of 3 nucleotides), frameshift-inducing, or nonsense-mediated decay (NMD)-triggering based on the position of premature termination codons relative to the last exon-exon junction. Reading frame analysis was performed using custom Python scripts leveraging the pandas^9^ and NumPy^10^ libraries for data manipulation.
 
+### Positional Classification of Splicing Events (UTR/CDS Overlap)
+
+To determine the genomic context of alternative splicing events, we developed a hierarchical classification system that maps each event to its transcript architecture. For each splicing event, we extracted the genomic coordinates of the alternatively spliced region (the retained intron interval for RI events, defined as the span from the upstream exon end to the downstream exon start; or the skipped exon interval for SE events). These coordinates were then overlapped with all annotated transcripts of the host gene parsed from the reference GTF annotation.
+
+For each transcript, we constructed a complete model containing exon boundaries, coding sequence (CDS) intervals, start codon positions, and stop codon positions. The alternative region was classified relative to each transcript using the following priority hierarchy:
+
+1. **Start_Codon**: The alternative region overlaps with the annotated start codon interval
+2. **Stop_Codon**: The alternative region overlaps with the annotated stop codon interval
+3. **CDS**: The alternative region overlaps with any CDS interval
+4. **5'UTR**: The alternative region lies entirely upstream of the CDS span (relative to strand)
+5. **3'UTR**: The alternative region lies entirely downstream of the CDS span (relative to strand)
+6. **NonCoding**: The alternative region overlaps exonic sequence in a non-coding transcript
+7. **Intronic**: The alternative region lies within intronic sequence of the transcript
+
+For strand-aware UTR assignment, we applied the following logic: on the plus strand, regions ending before CDS start were classified as 5'UTR, while regions starting after CDS end were classified as 3'UTR; this logic was inverted for minus strand transcripts. Because a single genomic locus may be classified differently across multiple transcript isoforms, we collected classifications from all overlapping transcripts and applied the priority hierarchy to assign a single consensus classification to each event. This approach ensures that functionally consequential classifications (e.g., Start_Codon or CDS overlap) take precedence over UTR classifications when isoform-level ambiguity exists.
+
+To evaluate the enrichment of splicing events at specific genomic positions, we compared the observed distribution against a genome-wide background of all annotated introns (for RI events) or exons (for SE events). For each genomic region category, we calculated odds ratios and assessed statistical significance using Fisher's exact test with Bonferroni correction for multiple comparisons.
+
 ### Signal Peptide Analysis
 
 Signal peptide presence and loss was predicted using SignalP 6.0^11^, which employs deep neural network architectures for sequence-based signal peptide prediction. For each gene with retained intron events, we extracted the translated protein sequences of both the canonical transcript and the predicted RI-containing isoform. Signal peptide loss was defined as the presence of a high-confidence signal peptide (probability > 0.5) in the canonical isoform but not in the alternative isoform. Odds ratios comparing signal peptide loss between UFM1-dependent and UFM1-independent events were calculated using Fisher's exact test implemented in SciPy^12^.
