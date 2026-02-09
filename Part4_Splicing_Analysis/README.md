@@ -95,25 +95,6 @@ python run_pipeline.py --species mouse --fraction total
 python run_pipeline.py --species arabidopsis --fraction nucleus
 ```
 
-### Cross-Species Conservation Analysis
-To regenerate the integrated results across all three species:
-
-```bash
-# Automated GO enrichment and landscape plotting
-bash src/run_GO_Final_pipeline.sh
-```
-
-### Retained Intron (RI) Data Aggregation
-A consolidated cross-species RI dataset is available:
-
-```bash
-# Generate consolidated RI events
-python src/aggregate_ri_events.py
-
-# Output: results/RI_Consolidated_Aggregation.tsv
-# Columns: Species, GeneID, GeneName, PSI_Percentage, Dependency
-```
-
 ---
 
 ## Pipeline Overview
@@ -140,16 +121,6 @@ The pipeline consists of multiple steps organized into functional phases:
 
 ## Output Files
 
-### Consolidated RI Dataset
-- **File**: `results/RI_Consolidated_Aggregation.tsv`
-- **Description**: Cross-species Retained Intron events with PSI percentages
-- **Columns**:
-  - `Species`: human, mouse, or arabidopsis
-  - `GeneID`: Gene identifier (e.g., ENSG..., ENSMUSG..., AT...)
-  - `GeneName`: Gene symbol
-  - `PSI_Percentage`: Percent Spliced In (positive = retention in control/WT)
-  - `Dependency`: UFM1-Dependent or UFM1-Independent
-
 ### Species-Specific Results
 Each species has results organized under `results/<species>/<fraction>/`:
 - `step01_data_prep/`: Filtered rMATS events
@@ -165,7 +136,6 @@ Each species has results organized under `results/<species>/<fraction>/`:
 
 Standalone scripts are provided in `src/` for custom analyses:
 
-- **`src/aggregate_ri_events.py`**: Generate consolidated RI dataset across species
 - **`src/analyze_signalp_loss.R`**: Background-controlled Odds Ratio calculations for SignalP
 - **`src/analyze_go_enrichment.R`**: Custom GO enrichment analysis
 - **`src/plot_rna_map.py`**: RNA binding protein positional enrichment visualization
