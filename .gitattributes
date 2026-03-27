@@ -1,0 +1,7 @@
+# Exclude generated results from language statistics
+*.html linguist-documentation
+Splicing_Analysis/results/** linguist-generated
+Splicing_Analysis/test_human_ri/** linguist-generated
+Subcellular_Enrichmnet_Analysis/results/** linguist-generated
+Ribosome_Proteomics_Analysis/results/** linguist-generated
+phylo_profiling/4.Annotations/** linguist-generated
