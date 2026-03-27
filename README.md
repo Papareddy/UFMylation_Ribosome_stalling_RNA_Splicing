@@ -23,7 +23,7 @@ The project is organized into five core analysis modules, each corresponding to 
 *   **Outputs**: Differential expression (volcano plots) and GO enrichment for stalled ribosome clusters (Figure 3).
 
 ### 3. Subcellular Enrichment (`Subcellular_Enrichmnet_Analysis/`)
-*   **Purpose**: Spatial proteomics and transcriptomics analysis to identify enrichment patterns across cellular fractions (e.g., Microsome vs. Nucleus).
+*   **Purpose**: Subcellular relocalisation of proteins under ribosome stalling in UFM1 dependent manner.
 *   **Methods**: Statistical enrichment testing and visualization of fraction-specific targets.
 
 ### 4. Splicing Functional Impact (`Splicing_Analysis/`)
