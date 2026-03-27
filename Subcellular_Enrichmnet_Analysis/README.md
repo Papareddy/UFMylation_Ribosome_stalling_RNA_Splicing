@@ -1,4 +1,4 @@
-# Figure 2: Subcellular Compartment Enrichment Analysis
+# Subcellular Compartment Enrichment Analysis
 
 This project analyzes subcellular compartment proteomics and transcriptomics data to identify enrichment patterns of proteins and transcripts across different cellular fractions. The pipeline is designed to process quantitative data, perform statistical analysis for enrichment, and visualize the results.
 
