@@ -1,0 +1,7 @@
+dataset	event_type	exon_location_class	n_events	frac
+UFM1_dependent	SE	all_coding_exons	0	0.0
+UFM1_dependent	SE	all_non_coding_exons	1	0.16666666666666666
+UFM1_dependent	SE	some_non_coding_exons	5	0.8333333333333334
+UFM1_independent	SE	all_coding_exons	0	0.0
+UFM1_independent	SE	all_non_coding_exons	0	0.0
+UFM1_independent	SE	some_non_coding_exons	1	1.0

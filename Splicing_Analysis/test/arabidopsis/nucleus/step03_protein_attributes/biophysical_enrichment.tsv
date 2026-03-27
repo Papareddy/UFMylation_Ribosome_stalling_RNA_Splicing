@@ -1,0 +1,10 @@
+feature	odds_ratio	pval	log2_odds	count_in_set	set_size	bg_count	bg_size	comparison	fdr
+SignalP	1.5066576337950386	0.5266726587565922	0.5913516225488419	1	6	3814	32544	Lost_vs_Genome	1
+TMHMM	0.7278129132530684	1	-0.4583604463996052	1	6	7015	32544	Lost_vs_Genome	1
+NCOILS	1.3512582660721995	0.5632033243051854	0.43430344340665555	1	6	4196	32544	Lost_vs_Genome	1
+SignalP	0	1	-Inf	0	1	3814	32544	Preserved_vs_Genome	1
+TMHMM	0	1	-Inf	0	1	7015	32544	Preserved_vs_Genome	1
+NCOILS	0	1	-Inf	0	1	4196	32544	Preserved_vs_Genome	1
+SignalP	Inf	1	Inf	1	6	1	7	Lost_vs_Preserved	1
+TMHMM	Inf	1	Inf	1	6	1	7	Lost_vs_Preserved	1
+NCOILS	Inf	1	Inf	1	6	1	7	Lost_vs_Preserved	1

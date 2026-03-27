@@ -1,0 +1,28 @@
+[data]
+bam_prefix = 
+miso_prefix = 
+bam_files = ["/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ctrl_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ans_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/ufm1_ctrl_dox_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/ufm1_ans_dox_NUCL_merged.bam"]
+miso_files = ["/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ctrl_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ans_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/ufm1_ctrl_dox_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/ufm1_ans_dox_NUCL_merged.bam"]
+[plotting]
+fig_height = 7
+fig_width = 8
+exon_scale = 1
+intron_scale = 1
+logged = False
+font_size = 8
+bar_posteriors = False
+nyticks = 4
+nxticks = 6
+show_ylabel = True
+show_xlabel = True
+plot_title = "gene symbol"
+plot_label = plot_label
+show_posteriors = False
+number_junctions = True
+resolution = .5
+reverse_minus = True
+min_counts = 0
+text_background = True
+group_info = True
+colors = ["#2196F3","#F44336","#4CAF50","#FF9800"]
+sample_labels = ["SPG7 WT-1 IncLevel: 1.00","SPG7 WT-2 IncLevel: 0.77","SPG7 UFM1-1 IncLevel: 1.00","SPG7 UFM1-2 IncLevel: 0.93"]

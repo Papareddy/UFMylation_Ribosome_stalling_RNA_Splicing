@@ -1,0 +1,2 @@
+class	label	comparison	n_UFM1_dependent	n_UFM1_independent	median_UFM1_dependent	median_UFM1_independent	delta_median	L1_bin_distance	perm_pvalue_L1	star
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	214	130	0.538747205454952	0.5872940957700966	-0.048546890315144586	0.1526959022286125	0.6293706293706294	ns

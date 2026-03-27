@@ -1,0 +1,15 @@
+RI_Position	Group	Reference	Odds_Ratio	P_Value	Significance	Label
+Start_Codon	UFM1_dependent	Genome	inf	8.562299029979299e-31	***	UFM1_dependent vs Genome
+Start_Codon	UFM1_independent	Genome	inf	2.621092177169913e-39	***	UFM1_independent vs Genome
+Stop_Codon	UFM1_dependent	Genome	inf	2.544216864879469e-252	***	UFM1_dependent vs Genome
+Stop_Codon	UFM1_independent	Genome	inf	8.628903815339497e-187	***	UFM1_independent vs Genome
+CDS	UFM1_dependent	Genome	0.08566263922625969	2.0345115919817711e-162	***	UFM1_dependent vs Genome
+CDS	UFM1_independent	Genome	0.06130730926263305	1.2988894817434669e-113	***	UFM1_independent vs Genome
+5UTR	UFM1_dependent	Genome	0.7527423023353957	0.03629721145129664	*	UFM1_dependent vs Genome
+5UTR	UFM1_independent	Genome	0.526281694429408	0.0009562314878080974	***	UFM1_independent vs Genome
+3UTR	UFM1_dependent	Genome	16.490697061492472	1.0159453217884398e-182	***	UFM1_dependent vs Genome
+3UTR	UFM1_independent	Genome	16.653303742474	2.1288397784893646e-109	***	UFM1_independent vs Genome
+Intronic	UFM1_dependent	Genome	0.0	2.644914575721839e-28	***	UFM1_dependent vs Genome
+Intronic	UFM1_independent	Genome	0.0	7.91718356347535e-17	***	UFM1_independent vs Genome
+NonCoding	UFM1_dependent	Genome	inf	9.175066805759886e-155	***	UFM1_dependent vs Genome
+NonCoding	UFM1_independent	Genome	inf	3.4983292534028023e-126	***	UFM1_independent vs Genome

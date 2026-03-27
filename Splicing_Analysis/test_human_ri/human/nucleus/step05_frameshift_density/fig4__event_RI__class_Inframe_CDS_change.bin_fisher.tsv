@@ -1,0 +1,6 @@
+class	label	comparison	bin_index	bin_start	bin_end	bin_center	n_UFM1_dependent_in_bin	n_UFM1_dependent_out_bin	n_UFM1_independent_in_bin	n_UFM1_independent_out_bin	odds_ratio_UFM1_dependent_vs_UFM1_independent	p_value	q_value	star	enriched_dataset
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	1	0.0	0.2	0.1	30	184	21	109	0.8462732919254659	0.6396584304626048	0.8962603450600718	ns	UFM1_independent
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	2	0.2	0.4	0.30000000000000004	45	169	19	111	1.5555901588290253	0.15452650550753708	0.7493402060499241	ns	UFM1_dependent
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	3	0.4	0.6000000000000001	0.5	52	162	30	100	1.0699588477366255	0.8962603450600718	0.8962603450600718	ns	UFM1_dependent
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	4	0.6000000000000001	0.8	0.7000000000000001	47	167	35	95	0.7639007698887939	0.29973608241996963	0.7493402060499241	ns	UFM1_independent
+Inframe_CDS_change	Inframe_CDS_change	UFM1_dependent_vs_UFM1_independent	5	0.8	1.0	0.9	40	174	25	105	0.9655172413793104	0.888211604558314	0.8962603450600718	ns	UFM1_independent

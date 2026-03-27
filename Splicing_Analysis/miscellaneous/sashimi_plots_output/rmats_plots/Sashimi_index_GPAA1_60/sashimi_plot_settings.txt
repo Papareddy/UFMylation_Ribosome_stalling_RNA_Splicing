@@ -1,0 +1,28 @@
+[data]
+bam_prefix = 
+miso_prefix = 
+bam_files = ["/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ctrl_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ans_NUCL_merged.bam"]
+miso_files = ["/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ctrl_NUCL_merged.bam","/Users/ranjithpapareddy/Desktop/Desktop-Ranjith-iMac/forGIT/UFMylation_Ribosome_stalling_RNA_Splicing/merged_bams/wt_ans_NUCL_merged.bam"]
+[plotting]
+fig_height = 7
+fig_width = 8
+exon_scale = 1
+intron_scale = 1
+logged = False
+font_size = 8
+bar_posteriors = False
+nyticks = 4
+nxticks = 6
+show_ylabel = True
+show_xlabel = True
+plot_title = "gene symbol"
+plot_label = plot_label
+show_posteriors = False
+number_junctions = True
+resolution = .5
+reverse_minus = True
+min_counts = 0
+text_background = True
+group_info = False
+colors = ["#CC0011","#FF8800"]
+sample_labels = ["GPAA1 WT_Control-1 IncLevel: 0.91","GPAA1 WT_Anisomycin-1 IncLevel: 0.94"]

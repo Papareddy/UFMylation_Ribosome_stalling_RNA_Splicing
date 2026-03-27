@@ -1,0 +1,4 @@
+Group,Total,N_Exonic_CAG,Pct_Exonic_CAG,N_Terminal_CAG,Pct_Terminal_CAG,Pvalue
+UFM1_dependent,587,378,64.4,63,10.73,0.186848
+UFM1_independent,345,214,62.03,47,13.62,0.666903
+Constitutive,500,302,60.4,61,12.2,NA

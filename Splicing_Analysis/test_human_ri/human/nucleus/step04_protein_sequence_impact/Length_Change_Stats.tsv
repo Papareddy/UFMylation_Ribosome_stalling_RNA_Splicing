@@ -1,0 +1,3 @@
+dataset	event_type	n_events	median_abs_delta_aa	median_log2_abs_delta_aa_plus1	frac_delta_cds_nonzero
+UFM1_dependent	RI	587	432.0	8.758223214726724	0.9812606473594548
+UFM1_independent	RI	345	417.0	8.707359132080883	0.991304347826087

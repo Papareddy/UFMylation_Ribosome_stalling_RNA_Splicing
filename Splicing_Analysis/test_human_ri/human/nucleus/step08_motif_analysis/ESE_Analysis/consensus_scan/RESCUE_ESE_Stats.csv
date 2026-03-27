@@ -1,0 +1,4 @@
+Group,Total,N_With_ESE,Pct_With_ESE,Total_Hits,Pvalue
+UFM1_dependent,587,194,33.05,394,0.036475
+UFM1_independent,345,125,36.23,263,0.387968
+Constitutive,500,196,39.2,508,NA

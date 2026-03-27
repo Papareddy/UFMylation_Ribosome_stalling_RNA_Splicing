@@ -1,0 +1,2 @@
+class	label	comparison	n_UFM1_dependent	n_UFM1_independent	median_UFM1_dependent	median_UFM1_independent	delta_median	L1_bin_distance	perm_pvalue_L1	star
+Frameshift_no_NMD	non_NMD	UFM1_dependent_vs_UFM1_independent	7	2	0.3823953823953824	0.7061425056060299	-0.32374712321064747	1.4285714285714286	0.42157842157842157	ns

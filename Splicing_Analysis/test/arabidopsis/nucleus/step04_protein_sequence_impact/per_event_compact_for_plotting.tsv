@@ -1,0 +1,8 @@
+event_id	GeneID	EventType	protein_impact_class	protein_predicted_identical	protein_predicted_different	delta_cds_overlap_bp	exon_location_class	advanced_frameshift_any	advanced_NMD_proxy_any	advanced_overlaps_start_codon_any	advanced_overlaps_stop_codon_any	advanced_n_transcripts_matched	advanced_transcript_ids	RI_Position	dataset
+chr4|-|4827485|4827527|4827154|4827271|4828814|4829167	AT4G07990	SE	Inframe_CDS_change	False	True	42	some_non_coding_exons	False	False	False	False	1	AT4G07990	CDS	UFM1_dependent
+chr4|-|1121723|1121796|1121275|1121631|1121857|1122223	AT4G02550	SE	UTR_only	False	False	0	all_non_coding_exons	False	False	False	False	1	AT4G02550	5UTR	UFM1_dependent
+chr4|+|16402957|16403022|16402616|16402735|16403454|16403790	AT4G34265	SE	Start_Stop_disruption	False	True	34	some_non_coding_exons	True	True	False	True	2	AT4G34265	Stop_Codon	UFM1_dependent
+chr4|+|13879604|13879664|13878754|13879340|13879845|13880346	AT4G27870	SE	Inframe_CDS_change	False	True	60	some_non_coding_exons	False	False	False	False	1	AT4G27870	CDS	UFM1_dependent
+chr4|+|13025599|13025856|13025162|13025273|13026055|13026168	AT4G25500	SE	Start_Stop_disruption	False	True	14	some_non_coding_exons	True	True	True	False	1	AT4G25500	Start_Codon	UFM1_dependent
+chr4|+|17308116|17308175|17307708|17307831|17308588|17308686	AT4G36720	SE	Frameshift_NMD_likely	False	True	59	some_non_coding_exons	True	True	False	False	1	AT4G36720	CDS	UFM1_dependent
+chr4|-|9685665|9686024|9685185|9685454|9686497|9686616	AT4G17310	SE	Start_Stop_disruption	False	True	42	some_non_coding_exons	True	False	False	True	2	AT4G17310	Stop_Codon	UFM1_independent

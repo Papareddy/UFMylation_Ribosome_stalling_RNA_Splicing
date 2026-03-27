@@ -1,0 +1,2 @@
+class	label	comparison	n_UFM1_dependent	n_UFM1_independent	median_UFM1_dependent	median_UFM1_independent	delta_median	L1_bin_distance	perm_pvalue_L1	star
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	2	1	0.2955717552887364	0.5308491142333537	-0.23527735894461727	1.0	1.0	ns

@@ -1,0 +1,6 @@
+class	label	comparison	bin_index	bin_start	bin_end	bin_center	n_UFM1_dependent_in_bin	n_UFM1_dependent_out_bin	n_UFM1_independent_in_bin	n_UFM1_independent_out_bin	odds_ratio_UFM1_dependent_vs_UFM1_independent	p_value	q_value	star	enriched_dataset
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	1	0.0	0.2	0.1	13	45	4	33	2.3833333333333333	0.17926229568792645	0.2987704928132108	ns	UFM1_dependent
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	2	0.2	0.4	0.30000000000000004	11	47	1	36	8.425531914893616	0.02521517678464848	0.0630379419616212	ns	UFM1_dependent
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	3	0.4	0.6000000000000001	0.5	4	54	5	32	0.4740740740740741	0.3043628471482798	0.38045355893534977	ns	UFM1_independent
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	4	0.6000000000000001	0.8	0.7000000000000001	9	49	4	33	1.5153061224489797	0.7605760648534143	0.7605760648534143	ns	UFM1_dependent
+Start_Stop_disruption	Start_Stop_disruption	UFM1_dependent_vs_UFM1_independent	5	0.8	1.0	0.9	21	37	23	14	0.345475910693302	0.01994038136989275	0.0630379419616212	ns	UFM1_independent
