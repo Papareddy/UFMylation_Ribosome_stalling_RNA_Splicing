@@ -51,10 +51,10 @@ tryCatch({
 # ==============================================================================
 message("--- Defining Groups ---")
 
-# A. Experimental Groups (RI events only)
-ri_events <- events[events$EventType == "RI", ]
-dep_ri <- ri_events[ri_events$Group == "UFM1_dependent", ]
-indep_ri <- ri_events[ri_events$Group == "UFM1_independent", ]
+# A. Experimental Groups (Generalize to all types)
+target_events <- events
+dep_events <- target_events[target_events$Group == "UFM1_dependent", ]
+indep_events <- target_events[target_events$Group == "UFM1_independent", ]
 
 # B. Constitutive Introns (all introns in 3'UTR, excluding experimental)
 all_introns_grl <- intronsByTranscript(txdb, use.names=TRUE)
@@ -66,12 +66,12 @@ utr3_ranges <- unlist(range(utr3_grl), use.names=TRUE)
 utr3_introns <- subsetByOverlaps(all_introns_flat, utr3_ranges, type="within")
 
 # Remove experimental introns from control
-targets <- c(dep_ri, indep_ri)
+targets <- c(dep_events, indep_events)
 hits <- findOverlaps(utr3_introns, targets)
 control_introns <- if(length(hits) > 0) utr3_introns[-unique(queryHits(hits))] else utr3_introns
 
-message(paste("N Dependent:", length(dep_ri)))
-message(paste("N Independent:", length(indep_ri)))
+message(paste("N Dependent:", length(dep_events)))
+message(paste("N Independent:", length(indep_events)))
 message(paste("N Control:", length(control_introns)))
 
 # ==============================================================================
@@ -166,8 +166,8 @@ calculate_density <- function(gr, group_name, stop_df, window, tx_granges) {
 }
 
 # Calculate for each group (using preloaded transcripts)
-density_dep <- calculate_density(dep_ri, "UFM1_dependent", stop_codon_df, WIN, tx_gr)
-density_indep <- calculate_density(indep_ri, "UFM1_independent", stop_codon_df, WIN, tx_gr)
+density_dep <- calculate_density(dep_events, "UFM1_dependent", stop_codon_df, WIN, tx_gr)
+density_indep <- calculate_density(indep_events, "UFM1_independent", stop_codon_df, WIN, tx_gr)
 density_control <- calculate_density(control_introns, "Constitutive", stop_codon_df, WIN, tx_gr)
 
 all_density <- bind_rows(density_dep, density_indep, density_control)
@@ -185,8 +185,8 @@ if (nrow(all_density) > 0) {
   
   # Create counts for legend
   leg_labels <- c(
-    paste0("UFM1 Dep (n=", length(dep_ri), ")"),
-    paste0("UFM1 Indep (n=", length(indep_ri), ")"),
+    paste0("UFM1 Dep (n=", length(dep_events), ")"),
+    paste0("UFM1 Indep (n=", length(indep_events), ")"),
     paste0("Constitutive (n=", length(control_introns), ")")
   )
   

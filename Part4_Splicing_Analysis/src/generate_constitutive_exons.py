@@ -171,7 +171,8 @@ def main():
         'intron_upstream': open(f"{base_out}.intron_upstream.bed", "w"),
         'intron_downstream': open(f"{base_out}.intron_downstream.bed", "w"),
         '5ss_wide': open(f"{base_out}.5ss_wide.bed", "w"),
-        '3ss_wide': open(f"{base_out}.3ss_wide.bed", "w")
+        '3ss_wide': open(f"{base_out}.3ss_wide.bed", "w"),
+        'entire_region': open(f"{base_out}.entire_region.bed", "w")
     }
     
     for idx, (chrom, c_start, c_end, strand, tid) in enumerate(sampled):
@@ -201,6 +202,9 @@ def main():
             # Range: [c_end+6, c_end+156] (Assuming +6 is splice site)
             files['intron_downstream'].write(f"{chrom}\t{c_end+6}\t{c_end+156}\t{name}\t0\t{strand}\n")
             
+            # Entire Region: [c_start-170, c_end+156]
+            files['entire_region'].write(f"{chrom}\t{c_start-170}\t{c_end+156}\t{name}\t0\t{strand}\n")
+            
         else: # (-) Strand
             # 3'SS (Acceptor) is at c_end (Genomic High)
             # [c_end-3, c_end+20]
@@ -221,6 +225,9 @@ def main():
             # Ends at c_start.
             # Range: [c_start-156, c_start-6]
             files['intron_downstream'].write(f"{chrom}\t{c_start-156}\t{c_start-6}\t{name}\t0\t{strand}\n")
+            
+            # Entire Region: [c_start-156, c_end+170]
+            files['entire_region'].write(f"{chrom}\t{c_start-156}\t{c_end+170}\t{name}\t0\t{strand}\n")
             
     for f in files.values(): f.close()
 

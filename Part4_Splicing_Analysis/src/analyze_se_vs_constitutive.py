@@ -47,7 +47,7 @@ def main():
         run_cmd(cmd_gen, "Generating Constitutive Exon Background")
     
     # 2. Extract Background Sequences
-    regions = ['exon', '3ss', '5ss', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide']
+    regions = ['exon', '3ss', '5ss', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide', 'entire_region']
     base_out = const_bed.replace(".bed", "")
     if base_out.endswith(".exon"): base_out = base_out.replace(".exon", "")
     

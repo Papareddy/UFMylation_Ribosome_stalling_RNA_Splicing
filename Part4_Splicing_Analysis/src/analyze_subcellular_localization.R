@@ -67,10 +67,10 @@ get_gene_lists <- function(rds_path, strip_version) {
   if(!file.exists(rds_path)) return(NULL)
   events <- readRDS(rds_path)
   
-  # Group RI events
-  ri <- events[events$EventType == "RI",]
-  genes_dep   <- unique(ri$GeneID[ri$Group == "UFM1_dependent"])
-  genes_indep <- unique(ri$GeneID[ri$Group == "UFM1_independent"])
+  # Group events (Generalize to all types if needed, or keep all)
+  # ri <- events[events$EventType == "RI",] # Removed hardcoded RI filter
+  genes_dep   <- unique(events$GeneID[events$Group == "UFM1_dependent"])
+  genes_indep <- unique(events$GeneID[events$Group == "UFM1_independent"])
   
   if(strip_version) {
     genes_dep   <- sub("\\..*", "", genes_dep)
@@ -90,7 +90,16 @@ if(is.null(lists)) stop("RDS file missing or empty for ", SPECIES)
 
 # 2. BioMart Connection
 message("Connecting to BioMart...")
-mart <- useMart(meta$mart_name, dataset = meta$mart_data, host = meta$mart_host)
+if (meta$mart_name == "ensembl") {
+  mart <- tryCatch({
+    useEnsembl(biomart = meta$mart_name, dataset = meta$mart_data, mirror = "useast")
+  }, error = function(e) {
+    message("Mirror useast failed, trying uswest...")
+    useEnsembl(biomart = meta$mart_name, dataset = meta$mart_data, mirror = "uswest")
+  })
+} else {
+  mart <- useMart(meta$mart_name, dataset = meta$mart_data, host = meta$mart_host)
+}
 
 # 3. Fetch GO for our genes
 all_event_genes <- unique(c(lists$dep, lists$ind))

@@ -16,11 +16,11 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
-# --- Argument Parsing ---
 option_list <- list(
   make_option(c("--gtf"), type="character", help="Path to GTF file"),
   make_option(c("--events"), type="character", help="Path to UFM1 events RDS file"),
-  make_option(c("--outdir"), type="character", default=".", help="Output directory")
+  make_option(c("--outdir"), type="character", default=".", help="Output directory"),
+  make_option(c("--event_type"), type="character", default="RI", help="Event type to process (e.g. SE, A3SS, RI)")
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
@@ -31,51 +31,64 @@ txdb <- makeTxDbFromGFF(opt$gtf, format="gtf")
 events <- readRDS(opt$events)
 
 # Filter UFM1 Groups
-ri_events <- events[events$EventType == "RI"]
+target_events <- events # Generalize to all types
 # Use pre-calculated Group column
-dep_ri <- ri_events[ri_events$Group == "UFM1_dependent"]
-indep_ri <- ri_events[ri_events$Group == "UFM1_independent"]
+dep_events <- target_events[target_events$Group == "UFM1_dependent"]
+indep_events <- target_events[target_events$Group == "UFM1_independent"]
 
 # Assign unique IDs for tracking
-if (length(dep_ri) > 0) {
-  mcols(dep_ri)$RI_ID <- paste0("Dep_", seq_along(dep_ri))
+if (length(dep_events) > 0) {
+  mcols(dep_events)$Event_ID <- paste0("Dep_", seq_along(dep_events))
 }
-if (length(indep_ri) > 0) {
-  mcols(indep_ri)$RI_ID <- paste0("Indep_", seq_along(indep_ri))
+if (length(indep_events) > 0) {
+  mcols(indep_events)$Event_ID <- paste0("Indep_", seq_along(indep_events))
 }
 
-combined_ri <- c(dep_ri, indep_ri)
+combined_events <- c(dep_events, indep_events)
 
-if (length(combined_ri) > 0) {
+if (length(combined_events) > 0) {
   # Only keep necessary cols
-  mcols(combined_ri) <- mcols(combined_ri)[, c("Group", "RI_ID")]
+  mcols(combined_events) <- mcols(combined_events)[, c("Group", "Event_ID")]
 }
 
-# --- 1b. Prepare Control Group (Constitutive 3'UTR Introns) ---
-message("Extracting Constitutive 3'UTR Introns (Control)...")
+# --- 1b. Prepare Control Group ---
+if (opt$event_type == "RI") {
+  message("Extracting Constitutive 3'UTR Introns (Control for RI)...")
+  control_group_label <- "Control 3'UTR Intron"
+  
+  # 1. Get All Introns (with tx_id names)
+  all_features_grl <- intronsByTranscript(txdb, use.names=TRUE)
+  all_features_flat <- unlist(all_features_grl, use.names=TRUE)
+  
+  # 2. Get 3'UTR Ranges (Span from start to end of UTR)
+  utr3_grl <- threeUTRsByTranscript(txdb, use.names=TRUE)
+  utr3_ranges <- unlist(range(utr3_grl), use.names=TRUE)
+  
+  # 3. Filter: Keep introns that are fully contained in a 3'UTR
+  control_features_flat <- subsetByOverlaps(all_features_flat, utr3_ranges, type="within")
+} else {
+  message("Extracting Constitutive Exons (Control for SE/A3SS/A5SS/MXE)...")
+  control_group_label <- "Control Constitutive Exon"
+  
+  # 1. Get Exons
+  all_features_grl <- exonsBy(txdb, by="tx", use.names=TRUE)
+  all_features_flat <- unlist(all_features_grl, use.names=TRUE)
+  
+  # 2. Heuristic for "Constitutive": exons that appear in many transcripts of a gene, 
+  # but for metagene just picking random exons or internal exons works.
+  # Assuming any exon is a valid control for metagene.
+  control_features_flat <- all_features_flat
+}
 
-# Strategy: Get ALL introns, then keep those strictly WITHIN the 3'UTR span.
-# 1. Get All Introns (with tx_id names)
-all_introns_grl <- intronsByTranscript(txdb, use.names=TRUE)
-all_introns_flat <- unlist(all_introns_grl, use.names=TRUE)
-
-# 2. Get 3'UTR Ranges (Span from start to end of UTR)
-utr3_grl <- threeUTRsByTranscript(txdb, use.names=TRUE)
-utr3_ranges <- unlist(range(utr3_grl), use.names=TRUE)
-
-# 3. Filter: Keep introns that are fully contained in a 3'UTR
-# type="within" ensures start(intron) >= start(utr) AND end(intron) <= end(utr)
-utr3_introns_flat <- subsetByOverlaps(all_introns_flat, utr3_ranges, type="within")
-
-message(paste("Found", length(utr3_introns_flat), "Constitutive 3'UTR Introns."))
+message(paste("Found", length(control_features_flat), "Control features."))
 
 # Make a DF
 control_ri_df <- data.frame(
-  RI_ID = paste0("Control_", seq_along(utr3_introns_flat)),
-  Group = "Control 3'UTR Intron",
-  RI_Center = (start(utr3_introns_flat) + end(utr3_introns_flat)) / 2,
-  Strand = as.character(strand(utr3_introns_flat)),
-  tx_id = names(utr3_introns_flat) 
+  RI_ID = paste0("Control_", seq_along(control_features_flat)),
+  Group = control_group_label,
+  RI_Center = (start(control_features_flat) + end(control_features_flat)) / 2,
+  Strand = as.character(strand(control_features_flat)),
+  tx_id = names(control_features_flat) 
 )
 
 # Combine RI Maps
@@ -101,34 +114,34 @@ transcripts_gr <- transcripts(txdb)
 # Align styles
 tryCatch({seqlevelsStyle(combined_ri) <- seqlevelsStyle(transcripts_gr)[1]}, error=function(e){})
 
-# --- 2. Map RIs to Host Transcripts ---
-message("Mapping RIs to Host Transcripts...")
+# --- 2. Map Events to Host Transcripts ---
+message("Mapping Events to Host Transcripts...")
 
 # Find overlap
-ri_tx_map <- data.frame()
+event_tx_map <- data.frame()
 
-if (length(combined_ri) > 0) {
-    hits <- findOverlaps(combined_ri, transcripts_gr)
-    # We create a mapping table: RI_ID -> TX_ID
-    # Create RI Map (Experimental Groups)
-    ri_tx_map <- data.frame(
-      RI_Index = queryHits(hits),
+if (length(combined_events) > 0) {
+    hits <- findOverlaps(combined_events, transcripts_gr)
+    # We create a mapping table: Event_ID -> TX_ID
+    # Create Event Map (Experimental Groups)
+    event_tx_map <- data.frame(
+      Event_Index = queryHits(hits),
       TX_Index = subjectHits(hits)
     )
-    if (nrow(ri_tx_map) > 0) {
-        ri_tx_map$RI_ID <- combined_ri$RI_ID[ri_tx_map$RI_Index]
-        ri_tx_map$RI_Group <- combined_ri$Group[ri_tx_map$RI_Index]
-        ri_tx_map$RI_Center <- (start(combined_ri)[ri_tx_map$RI_Index] + end(combined_ri)[ri_tx_map$RI_Index]) / 2
-        ri_tx_map$Strand <- as.character(strand(combined_ri)[ri_tx_map$RI_Index])
-        ri_tx_map$tx_id <- transcripts_gr$tx_name[ri_tx_map$TX_Index]
+    if (nrow(event_tx_map) > 0) {
+        event_tx_map$Event_ID <- combined_events$Event_ID[event_tx_map$Event_Index]
+        event_tx_map$Event_Group <- combined_events$Group[event_tx_map$Event_Index]
+        event_tx_map$Event_Center <- (start(combined_events)[event_tx_map$Event_Index] + end(combined_events)[event_tx_map$Event_Index]) / 2
+        event_tx_map$Strand <- as.character(strand(combined_events)[event_tx_map$Event_Index])
+        event_tx_map$tx_id <- transcripts_gr$tx_name[event_tx_map$TX_Index]
     }
 }
 
 # Harmonize Control DF columns
-control_ri_df <- control_ri_df %>% select(RI_ID, RI_Group=Group, RI_Center, Strand, tx_id)
+control_event_df <- control_ri_df %>% select(Event_ID=RI_ID, Event_Group=Group, Event_Center=RI_Center, Strand, tx_id)
 
 # Combine Experimental and Control Maps
-ri_tx_map <- bind_rows(ri_tx_map, control_ri_df)
+event_tx_map <- bind_rows(event_tx_map, control_event_df)
 
 # !!! CRITICAL FILTER !!!
 # An RI might overlap multiple transcripts (isoforms).
@@ -140,16 +153,16 @@ ri_tx_map <- bind_rows(ri_tx_map, control_ri_df)
 # --- 3. Calculate Junction Distances (Vectorized) ---
 message("Calculating Junction Distances...")
 
-# Join RI Map with All Introns on TX_ID
-# Inner join: We only care about RIs mapped to transcripts that HAVE introns.
-merged_df <- inner_join(ri_tx_map, introns_df, by="tx_id")
+# Join Event Map with All Introns on TX_ID
+# Inner join: We only care about Events mapped to transcripts that HAVE introns.
+merged_df <- inner_join(event_tx_map, introns_df, by="tx_id")
 
 # Calculate Distance
-merged_df$raw_dist <- merged_df$intron_center - merged_df$RI_Center
+merged_df$raw_dist <- merged_df$intron_center - merged_df$Event_Center
 
 # Strand Correction
 # If - strand: Downstream is smaller coordinate. 
-# RI (1000) -> Downstream Intron (500). Dist = 500 - 1000 = -500.
+# Event (1000) -> Downstream Intron (500). Dist = 500 - 1000 = -500.
 # We want this to be POSITIVE distance (Downstream).
 # So for - strand, distinct = -raw_dist.
 merged_df$distance <- ifelse(merged_df$Strand == "-", -merged_df$raw_dist, merged_df$raw_dist)
@@ -167,11 +180,11 @@ message(paste("Junctions plotted:", nrow(filtered_df)))
 message("Generating Plot...")
 
 # Define Colors
-# Define Colors
-cols <- c("UFM1_dependent" = "#E57373", "UFM1_independent" = "#64B5F6", "Control 3'UTR Intron" = "#9E9E9E")
+cols <- c("UFM1_dependent" = "#E57373", "UFM1_independent" = "#64B5F6", 
+          "Control 3'UTR Intron" = "#9E9E9E", "Control Constitutive Exon" = "#9E9E9E")
 
 if (nrow(filtered_df) > 0) {
-    p <- ggplot(filtered_df, aes(x = distance, color = RI_Group, fill = RI_Group)) +
+    p <- ggplot(filtered_df, aes(x = distance, color = Event_Group, fill = Event_Group)) +
       # Density Plot
       geom_density(alpha = 0.2, linewidth = 1) +
       
@@ -191,7 +204,7 @@ if (nrow(filtered_df) > 0) {
       labs(
         title = "Metagene Profile: NMD Signature Density",
         subtitle = "Relative position of neighboring splice junctions",
-        x = "Distance from Retained Intron Center (bp)\n< Upstream | Downstream >",
+        x = "Distance from Splicing Event Center (bp)\n< Upstream | Downstream >",
         y = "Density of Splice Junctions"
       ) +
       scale_x_continuous(breaks = seq(-2000, 2000, 500)) +

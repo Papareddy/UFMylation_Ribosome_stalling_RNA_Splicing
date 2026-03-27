@@ -58,9 +58,9 @@ get_gene_lists <- function(rds_path, species) {
   if(!file.exists(rds_path)) return(NULL)
   events <- readRDS(rds_path)
   df_events <- if (inherits(events, "GRanges")) as.data.frame(events) else events
-  ri <- df_events[df_events$EventType == "RI", ]
-  genes_dep   <- unique(ri$GeneID[ri$Group == "UFM1_dependent"])
-  genes_indep <- unique(ri$GeneID[ri$Group == "UFM1_independent"])
+  # ri <- df_events[df_events$EventType == "RI", ] # Deleted hardcoded RI
+  genes_dep   <- unique(df_events$GeneID[df_events$Group == "UFM1_dependent"])
+  genes_indep <- unique(df_events$GeneID[df_events$Group == "UFM1_independent"])
   
   # Clean IDs
   if(species != "arabidopsis") {

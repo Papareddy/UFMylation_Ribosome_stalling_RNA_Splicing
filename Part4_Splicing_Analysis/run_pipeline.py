@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument("--cache-dir", default="data/cache", help="Directory to store persistent cache (TxDb, Biomart results).")
     parser.add_argument("--motif-db", help="Path to MEME Motif DB for AME analysis in Step 10. (default: CisBP for the chosen species)", default=argparse.SUPPRESS)
     parser.add_argument("--motifs", nargs='+', default=None, help="List of specific motifs to plot in RNA Map (Step 12).")
+    parser.add_argument("--cores", type=int, default=1, help="Number of cores to use for parallel processing (where applicable).")
     
     # Execution Control
     parser.add_argument("--start-step", type=int, default=1, help="Start pipeline from this step (1-9).")
@@ -561,9 +562,11 @@ def main():
                      else:
                           print(f"[WARN] Skipping Step 10B RI {name} (Missing inputs).")
 
-            # 10C: SE Analysis
-            if "SE" in args.event_types:
-                 print("[INFO] === Step 10C: SE Motif & Deep Dive Analysis ===")
+            # 10C: Non-RI Analysis (SE, A3SS, A5SS, MXE)
+            non_ri_types = [et for et in args.event_types if et in ["SE", "A3SS", "A5SS", "MXE"]]
+            if non_ri_types:
+                 current_type = non_ri_types[0] # assuming one per run
+                 print(f"[INFO] === Step 10C: {current_type} Motif & Deep Dive Analysis ===")
                  
                  # Only run directional analyses if --direct flag is set
                  if args.direct:
@@ -584,11 +587,11 @@ def main():
                      p_path = os.path.join(step1_out, p_name)
                      
                      if not os.path.exists(l_path) or not os.path.exists(p_path):
-                         print(f"[WARN] Skipping SE sub-analysis '{name}': inputs missing.")
+                         print(f"[WARN] Skipping {current_type} sub-analysis '{name}': inputs missing.")
                          continue
                          
-                     print(f"[INFO] Running SE Deep Dive: {name}...")
-                     step10_se_out = os.path.join(step8_out, f"SE_DeepDive_{name}")
+                     print(f"[INFO] Running {current_type} Deep Dive: {name}...")
+                     step10_se_out = os.path.join(step8_out, f"{current_type}_DeepDive_{name}")
                      os.makedirs(step10_se_out, exist_ok=True)
                      
                      # 1. Extract Sequences
@@ -597,8 +600,9 @@ def main():
                                 "--lost", l_path,
                                 "--preserved", p_path,
                                 "--genome_fasta", dna_fasta_file,
-                                "--outdir", step10_se_out]
-                     _run_and_log(cmd_se_a, f"step08_a_extract_se_{name}")
+                                "--outdir", step10_se_out,
+                                "--event_type", current_type]
+                     _run_and_log(cmd_se_a, f"step08_a_extract_{current_type.lower()}_{name}")
                      
                      # 2. Analyze vs Constitutive
                      lost_prefix = os.path.join(step10_se_out, "UFM1_dependent")
@@ -619,9 +623,9 @@ def main():
                          if args.motif_db:
                              cmd_se_b.append(f"--motif_db={args.motif_db}")
                              
-                         _run_and_log(cmd_se_b, f"step08_b_deep_dive_se_{name}")
+                         _run_and_log(cmd_se_b, f"step08_b_deep_dive_{current_type.lower()}_{name}")
                      else:
-                         print(f"[WARN] SE FASTA extraction failed or incomplete for {name}. Skipping analysis.")
+                         print(f"[WARN] {current_type} FASTA extraction failed or incomplete for {name}. Skipping analysis.")
                      
 
              
@@ -872,7 +876,8 @@ def main():
                          os.path.join(script_dir, "plot_nmd_metagene.R"),
                          "--gtf", gtf_file,
                          "--events", events_rds,
-                         "--outdir", nmd_out]
+                         "--outdir", nmd_out,
+                         "--event_type", args.event_types[0]]  # Assuming one event type per run due to bash loop
              _run_and_log(cmd_14b2, "step14b_nmd_metagene")
 
              # Feature Length Analysis (Introns & 3'UTRs)

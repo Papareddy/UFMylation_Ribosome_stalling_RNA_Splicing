@@ -52,9 +52,9 @@ genome_fa <- FaFile(opt$fasta)
 message("--- Defining Groups ---")
 
 # A. Experimental Groups
-ri_events <- events[events$EventType == "RI", ]
-dep_ri    <- ri_events[ri_events$Group == "UFM1_dependent", ]
-indep_ri  <- ri_events[ri_events$Group == "UFM1_independent", ]
+target_events <- events # Generalize to all types
+dep_events    <- target_events[target_events$Group == "UFM1_dependent", ]
+indep_events  <- target_events[target_events$Group == "UFM1_independent", ]
 
 # B. Control Group (Subtraction Logic)
 all_introns_grl  <- intronsByTranscript(txdb, use.names=TRUE)
@@ -74,14 +74,14 @@ tryCatch({
 utr3_introns <- subsetByOverlaps(all_introns_flat, utr3_ranges, type="within")
 
 # Remove overlaps with targets
-targets <- c(dep_ri, indep_ri)
+targets <- c(dep_events, indep_events)
 hits <- findOverlaps(utr3_introns, targets)
 control_introns <- if(length(hits) > 0) utr3_introns[-unique(queryHits(hits))] else utr3_introns
 
 # C. Calculate Counts for Legend
 counts_info <- list(
-  "UFM1_dependent"       = length(dep_ri),
-  "UFM1_independent"     = length(indep_ri),
+  "UFM1_dependent"       = length(dep_events),
+  "UFM1_independent"     = length(indep_events),
   "Control 3'UTR Intron" = length(control_introns)
 )
 
@@ -160,15 +160,15 @@ get_ejc_density <- function(gr, grp_name, txdb_obj, anchor_type="3p") {
 message("--- Calculating EJC Densities ---")
 # 5' EJC Data
 ejc_5p <- bind_rows(
-  get_ejc_density(dep_ri, "UFM1_dependent", txdb, "5p"),
-  get_ejc_density(indep_ri, "UFM1_independent", txdb, "5p"),
+  get_ejc_density(dep_events, "UFM1_dependent", txdb, "5p"),
+  get_ejc_density(indep_events, "UFM1_independent", txdb, "5p"),
   get_ejc_density(control_introns, "Control 3'UTR Intron", txdb, "5p")
 ) %>% filter(distance >= -WIN_EJC & distance <= WIN_EJC)
 
 # 3' EJC Data
 ejc_3p <- bind_rows(
-  get_ejc_density(dep_ri, "UFM1_dependent", txdb, "3p"),
-  get_ejc_density(indep_ri, "UFM1_independent", txdb, "3p"),
+  get_ejc_density(dep_events, "UFM1_dependent", txdb, "3p"),
+  get_ejc_density(indep_events, "UFM1_independent", txdb, "3p"),
   get_ejc_density(control_introns, "Control 3'UTR Intron", txdb, "3p")
 ) %>% filter(distance >= -WIN_EJC & distance <= WIN_EJC)
 
@@ -234,8 +234,8 @@ analyze_stops_robust <- function(gr, grp_name, fasta_file, window_size=25) {
 
 message("--- Calculating Stop Densities ---")
 stop_df <- rbind(
-  analyze_stops_robust(dep_ri, "UFM1_dependent", genome_fa, WIN_STOP),
-  analyze_stops_robust(indep_ri, "UFM1_independent", genome_fa, WIN_STOP),
+  analyze_stops_robust(dep_events, "UFM1_dependent", genome_fa, WIN_STOP),
+  analyze_stops_robust(indep_events, "UFM1_independent", genome_fa, WIN_STOP),
   analyze_stops_robust(control_introns, "Control 3'UTR Intron", genome_fa, WIN_STOP)
 )
 

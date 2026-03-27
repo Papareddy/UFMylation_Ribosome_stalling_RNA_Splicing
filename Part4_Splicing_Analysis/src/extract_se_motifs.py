@@ -140,9 +140,10 @@ def get_intervals(row):
         # Wide (AME)
         bed_entries['5ss_wide'] = (chrom, c_start - 50, c_start + 50, strand)
         
-        # Flanking Introns (150bp)
-        # Upstream Intron (genomic higher than c_end): [c_end + 20, c_end + 170] -> RevComp (Intron downstream of cassette in transcription)
-        # Downstream Intron (genomic lower than c_start): [c_start - 156, c_start - 6] -> RevComp (Intron upstream of cassette in transcription)
+        bed_entries['intron_upstream'] = (chrom, c_end + 20, c_end + 170, strand)
+        bed_entries['intron_downstream'] = (chrom, c_start - 156, c_start - 6, strand)
+        # Entire Region: [c_start - 156, c_end + 170] (Lowest to Highest coords)
+        bed_entries['entire_region'] = (chrom, c_start - 156, c_end + 170, strand)
         
         # Warning: For (-) strand:
         # Transcript starts high, goes low.
@@ -178,11 +179,13 @@ def get_intervals(row):
         #   5'SS is [c_end - 3, c_end + 6].
         #   So flank is [c_end + 6, c_end + 156].
         bed_entries['intron_downstream'] = (chrom, c_end + 6, c_end + 156, strand)
+        # Entire Region: [c_start - 170, c_end + 156]
+        bed_entries['entire_region'] = (chrom, c_start - 170, c_end + 156, strand)
     
     return bed_entries
 
 def write_beds(df, out_prefix):
-    keys = ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide']
+    keys = ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide', 'entire_region']
     beds = {k: open(f"{out_prefix}.{k}.bed", "w") for k in keys}
     
     for idx, row in df.iterrows():
@@ -204,6 +207,7 @@ def main():
     parser.add_argument("--preserved", required=True)
     parser.add_argument("--genome_fasta", required=True)
     parser.add_argument("--outdir", required=True)
+    parser.add_argument("--event_type", required=False, default="SE")
     args = parser.parse_args()
     
     os.makedirs(args.outdir, exist_ok=True)
@@ -212,11 +216,11 @@ def main():
     lost = pd.read_csv(args.lost, sep="\t")
     preserved = pd.read_csv(args.preserved, sep="\t")
     
-    # Filter for SE
+    # Filter for EventType
     if "EventType" in lost.columns:
-        lost = lost[lost["EventType"] == "SE"]
+        lost = lost[lost["EventType"] == args.event_type]
     if "EventType" in preserved.columns:
-        preserved = preserved[preserved["EventType"] == "SE"]
+        preserved = preserved[preserved["EventType"] == args.event_type]
     
     groups = {"UFM1_dependent": lost, "UFM1_independent": preserved}
     
@@ -229,7 +233,7 @@ def main():
         write_beds(df, prefix)
         
         # 2. Extract Sequences
-        for kind in ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide']:
+        for kind in ['5ss', '3ss', 'exon', 'intron_upstream', 'intron_downstream', '5ss_wide', '3ss_wide', 'entire_region']:
             bed = f"{prefix}.{kind}.bed"
             fa = f"{prefix}.{kind}.fa"
             # getfasta -s for strand specificity

@@ -33,15 +33,11 @@ if (!any(seqlevels(events) %in% seqlevels(txdb))) {
   seqlevelsStyle(events) <- seqlevelsStyle(txdb)[1]
 }
 
-# Only care about RI (Retained Introns) for the "Intron" comparison usually, 
-# but user said "UFM1-dependent introns". If the event is SE (Skipped Exon), 
-# the "intron" isn't the event. RI events *are* introns. 
-# We will filter for RI events for the "Introns" category comparisons.
-ri_events <- events[events$EventType == "RI"]
-
+# Filter UFM1 Groups
+target_events <- events # Generalize to all types
 # Define Groups from Events
-dep_ri <- ri_events[ri_events$Group == "UFM1_dependent"]
-indep_ri <- ri_events[ri_events$Group == "UFM1_independent"]
+dep_events <- target_events[target_events$Group == "UFM1_dependent"]
+indep_events <- target_events[target_events$Group == "UFM1_independent"]
 
 # ==============================================================================
 # PART A: INTRON LENGTHS
@@ -74,11 +70,11 @@ utr3_introns <- all_introns_unique[unique(queryHits(utr3_introns_hits))]
 # Prepare Data Frame
 df_introns_list <- list()
 
-if (length(dep_ri) > 0) {
-  df_introns_list[[length(df_introns_list) + 1]] <- data.frame(Length = width(dep_ri), Category = "UFM1_dependent")
+if (length(dep_events) > 0) {
+  df_introns_list[[length(df_introns_list) + 1]] <- data.frame(Length = width(dep_events), Category = "UFM1_dependent_event")
 }
-if (length(indep_ri) > 0) {
-  df_introns_list[[length(df_introns_list) + 1]] <- data.frame(Length = width(indep_ri), Category = "UFM1_independent")
+if (length(indep_events) > 0) {
+  df_introns_list[[length(df_introns_list) + 1]] <- data.frame(Length = width(indep_events), Category = "UFM1_independent_event")
 }
 if (length(utr3_introns) > 0) {
   df_introns_list[[length(df_introns_list) + 1]] <- data.frame(Length = width(utr3_introns), Category = "3'UTR Introns")
@@ -97,7 +93,7 @@ p_a <- ggplot(df_introns, aes(x = Category, y = Length, fill = Category)) +
                      breaks = c(100, 500, 1000, 5000, 10000, 50000),
                      labels = scales::comma) +
   theme_classic() +
-  labs(title = "Intron Length Distribution", y = "Length (bp, log2)") +
+  labs(title = "Event / Intron Length Distribution", y = "Length (bp, log2)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") + 
   stat_compare_means(ref.group = ".all.", label = "p.signif", method = "wilcox.test")
 
@@ -154,8 +150,8 @@ map_event_to_utr_len <- function(events_subset, label) {
   return(data.frame(Length = res$effective_len, Category = label))
 }
 
-dep_utr_lens <- map_event_to_utr_len(dep_ri, "3'UTRs with UFM1-dependent")
-indep_utr_lens <- map_event_to_utr_len(indep_ri, "3'UTRs with UFM1-independent")
+dep_utr_lens <- map_event_to_utr_len(dep_events, "3'UTRs with UFM1-dependent")
+indep_utr_lens <- map_event_to_utr_len(indep_events, "3'UTRs with UFM1-independent")
 
 # Backgrounds
 bg_all_utr <- data.frame(Length = as.numeric(utr3_lens_vec), Category = "All 3'UTRs")

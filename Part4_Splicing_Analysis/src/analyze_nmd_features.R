@@ -27,24 +27,24 @@ txdb <- makeTxDbFromGFF(opt$gtf, format="gtf")
 events <- readRDS(opt$events)
 
 # Filter UFM1 Groups
-ri_events <- events[events$EventType == "RI"]
+target_events <- events # Generalize to all types
 # Classify Dependent vs Independent using pre-calculated Group column
-dep_ri <- ri_events[ri_events$Group == "UFM1_dependent"]
-indep_ri <- ri_events[ri_events$Group == "UFM1_independent"]
+dep_events <- target_events[target_events$Group == "UFM1_dependent"]
+indep_events <- target_events[target_events$Group == "UFM1_independent"]
 
 # Assign ID to mcols for tracking
-if (length(dep_ri) > 0) {
-  mcols(dep_ri)$RI_ID <- paste0("Dep_", seq_along(dep_ri))
+if (length(dep_events) > 0) {
+  mcols(dep_events)$Event_ID <- paste0("Dep_", seq_along(dep_events))
 }
-if (length(indep_ri) > 0) {
-  mcols(indep_ri)$RI_ID <- paste0("Indep_", seq_along(indep_ri))
+if (length(indep_events) > 0) {
+  mcols(indep_events)$Event_ID <- paste0("Indep_", seq_along(indep_events))
 }
 
-combined_ri <- c(dep_ri, indep_ri)
+combined_events <- c(dep_events, indep_events)
 
-if (length(combined_ri) > 0) {
+if (length(combined_events) > 0) {
   # Only keep necessary mcols for speed
-  mcols(combined_ri) <- mcols(combined_ri)[, c("Group", "RI_ID")]
+  mcols(combined_events) <- mcols(combined_events)[, c("Group", "Event_ID")]
 }
 
 # --- 1. Prepare Features (Vectorized) ---
@@ -67,44 +67,39 @@ utr3_lens <- sum(width(utr3_grl))
 utr3_df <- data.frame(tx_id=names(utr3_lens), spliced_utr_len=as.numeric(utr3_lens))
 
 # --- 2. Overlap Analysis ---
-message("Overlapping RIs with Transcript Features...")
+message("Overlapping Events with Transcript Features...")
 
 # Align Styles
-tryCatch({seqlevelsStyle(combined_ri) <- seqlevelsStyle(introns_flat)[1]}, error=function(e){})
-tryCatch({seqlevelsStyle(combined_ri) <- seqlevelsStyle(utr3_grl)[1]}, error=function(e){})
+tryCatch({seqlevelsStyle(combined_events) <- seqlevelsStyle(introns_flat)[1]}, error=function(e){})
+tryCatch({seqlevelsStyle(combined_events) <- seqlevelsStyle(utr3_grl)[1]}, error=function(e){})
 
 # A. Find corresponding Intron (EJC Rule)
-# We map RI to the Intron it corresponds to (conceptually equivalent)
-hits_intron <- findOverlaps(combined_ri, introns_flat)
+# We map event to the Intron it corresponds to (conceptually equivalent for RI, for SE it might overlap)
+hits_intron <- findOverlaps(combined_events, introns_flat)
 
 results_df <- as.data.frame(hits_intron)
-results_df$RI_ID <- combined_ri$RI_ID[results_df$queryHits]
-results_df$Group <- combined_ri$Group[results_df$queryHits]
+results_df$Event_ID <- combined_events$Event_ID[results_df$queryHits]
+results_df$Group <- combined_events$Group[results_df$queryHits]
 results_df$tx_id <- introns_flat$tx_id[results_df$subjectHits]
 results_df$is_last_intron <- introns_flat$is_last_intron[results_df$subjectHits]
 
 # Define NMD Status
 results_df$NMD_Status <- ifelse(results_df$is_last_intron, "Escape", "Risk")
 
-if (length(combined_ri) > 0) {
+if (length(combined_events) > 0) {
     # B. Add Length Info (Long 3'UTR Rule)
-    # Join with 3'UTR lengths
-    # Note: An RI might overlap an intron, but is that intron in the 3'UTR?
-    # A retained intron implies it's "retained", so it was *supposed* to be an intron.
-    # Ideally we filter for RIs that overlap 3'UTRs specifically.
-
     # Filter for matches where the transcript actually HAS a 3'UTR
     results_df <- results_df %>% filter(tx_id %in% names(utr3_grl))
 
     # Add Spliced Length
     results_df <- left_join(results_df, utr3_df, by="tx_id")
 
-    # Add RI Length
-    ri_width_df <- data.frame(RI_ID = combined_ri$RI_ID, RI_Len = width(combined_ri))
-    results_df <- left_join(results_df, ri_width_df, by="RI_ID")
+    # Add Event Length
+    event_width_df <- data.frame(Event_ID = combined_events$Event_ID, Event_Len = width(combined_events))
+    results_df <- left_join(results_df, event_width_df, by="Event_ID")
 
     # Calculate Isoform Length
-    results_df$Isoform_UTR_Len <- results_df$spliced_utr_len + results_df$RI_Len
+    results_df$Isoform_UTR_Len <- results_df$spliced_utr_len + results_df$Event_Len
 
     # --- 3. Summary & Visualization ---
     message("Summarizing and Plotting...")
@@ -132,7 +127,7 @@ if (length(combined_ri) > 0) {
           geom_bar(stat="identity", position="stack") +
           scale_fill_manual(values=c("Escape"="#66BB6A", "Risk"="#EF5350")) + 
           labs(title="NMD Risk (50-nt Rule / Downstream Introns)",
-               subtitle="Escape = RI matches Last Intron\nRisk = Downstream introns exist",
+               subtitle="Escape = Event matches/overlaps Last Intron\nRisk = Downstream introns exist",
                y="Percentage of Transcripts") +
           theme_classic()
 
@@ -157,7 +152,7 @@ if (length(combined_ri) > 0) {
     message("Summary of NMD Risk:")
     print(plot_data_ejc)
 } else {
-    message("No RI events to analyze.")
+    message("No events to analyze.")
     # Create empty files to avoid breaking pipeline
     file.create(file.path(opt$outdir, "NMD_analysis_details.tsv"))
 }

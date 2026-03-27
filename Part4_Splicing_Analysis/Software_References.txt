@@ -1,0 +1,67 @@
+SOFTWARE AND METHODS REFERENCES
+
+This document lists the software, libraries, and databases used in the UFM1 Splicing Functional Impact Pipeline, along with their versions and primary scholarly references.
+
+================================================================================
+CORE BIOINFORMATICS SOFTWARE
+================================================================================
+
+rMATS (v4.1.2)
+- Purpose: Differential splicing quantification
+- Reference: Shen et al. (2014). rMATS: robust and flexible detection of differential alternative splicing from replicate RNA-Seq data. PNAS. [https://doi.org/10.1073/pnas.1419161111]
+
+MaxEntScan (Python Port)
+- Purpose: Splice site strength scoring
+- Reference: Yeo and Burge (2004). Maximum entropy modeling of short sequence motifs with applications to RNA splicing signals. J Comput Biol. [https://doi.org/10.1089/1066527041424143]
+
+MEME Suite (AME v5.x)
+- Purpose: Analysis of Motif Enrichment
+- Reference: McLeay and Bailey (2010). Motif enrichment analysis: a unified framework and an evaluation on ChIP data. Bioinformatics. [https://doi.org/10.1093/bioinformatics/btq248]
+
+SignalP (v6.0)
+- Purpose: Signal peptide prediction
+- Reference: Teufel et al. (2022). SignalP 6.0: predicting signal peptides using deep neural networks. Nat Methods. [https://doi.org/10.1038/s41592-021-01356-w]
+
+clusterProfiler (v>=4.0)
+- Purpose: Gene Ontology enrichment analysis
+- Reference: Wu et al. (2021). clusterProfiler 4.0: A universal enrichment tool for interpreting omics data. The Innovation. [https://doi.org/10.1016/j.xinn.2021.100141]
+
+BEDTools
+- Purpose: Genomic interval arithmetic
+- Reference: Quinlan and Hall (2010). BEDTools: a flexible suite of utilities for comparing genomic features. Bioinformatics. [https://doi.org/10.1093/bioinformatics/btq033]
+
+SAMtools
+- Purpose: Sequence alignment manipulation
+- Reference: Danecek et al. (2021). Twelve years of SAMtools and BCFtools. GigaScience. [https://doi.org/10.1093/gigascience/giab008]
+
+================================================================================
+PROGRAMMING ENVIRONMENTS
+================================================================================
+
+- Python (v3.11): Primary pipeline execution and data processing.
+- R (v>=4.3): Statistical analysis and visualization.
+- Mamba/Conda: Environment and dependency management.
+
+================================================================================
+KEY LIBRARIES AND PACKAGES
+================================================================================
+
+Python Scientific Stack:
+- pandas (>=2.0): Reback et al. (2020). Zenodo. [https://doi.org/10.5281/zenodo.3509134]
+- NumPy (>=1.24): Harris et al. (2020). Nature. [https://doi.org/10.1038/s41586-020-2649-2]
+- SciPy (>=1.10): Virtanen et al. (2020). Nat Methods. [https://doi.org/10.1038/s41592-019-0686-2]
+- Biopython: Cock et al. (2009). Bioinformatics. [https://doi.org/10.1093/bioinformatics/btp163]
+- pybedtools: Quinlan and Hall (2010). Bioinformatics. [https://doi.org/10.1093/bioinformatics/btq033]
+
+R/Bioconductor Stack:
+- tidyverse: Wickham et al. (2019). JOSS. [https://doi.org/10.21105/joss.01686]
+- biomaRt: Durinck et al. (2009). Nature Protocols. [https://doi.org/10.1038/nprot.2009.97]
+- GenomicRanges: Lawrence et al. (2013). PLOS Comp Biol. [https://doi.org/10.1371/journal.pcbi.1003118]
+- ComplexUpset: Krassowski (2020). Zenodo. [https://doi.org/10.5281/zenodo.3700590]
+
+================================================================================
+DATABASES
+================================================================================
+
+- CisBP-RNA: Ray et al. (2013). Nature. [https://doi.org/10.1038/nature12311]
+- Ensembl: Cunningham et al. (2022). Nucleic Acids Res. [https://doi.org/10.1093/nar/gkac958]
