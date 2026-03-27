@@ -35,11 +35,9 @@ The project is organized into five core analysis modules, each corresponding to 
 
 ---
 
-## Pipeline Highlights
+## Pipeline Overview
 
-*   **Cross-Species Integration**: Unified analysis across diverse eukaryotic models.
-*   **Spatial Regulatory Mapping**: Quantification of protein/transcript sequestering at the ER vs. nuclear localization.
-*   **Multi-Omic Synthesis**: Seamless integration of proteomics, transcriptomics, and evolutionary profiling.
+This analysis integrates phylogenetic profiling, quantitative proteomics, and transcriptomics across human, mouse, and Arabidopsis models to quantify protein and transcript sequestering at the ER vs. nuclear localization.
 
 ---
 
