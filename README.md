@@ -30,7 +30,7 @@ The project is organized into five core analysis modules, each corresponding to 
 *   **Purpose**: A multi-species pipeline to quantify the functional consequences of UFM1-dependent alternative splicing.
 *   **Features**: Frame-shift density analysis, protein domain enrichment, signal peptide loss quantification, and cross-species (Eukaryotic-wide) consolidation.
 
-### 5. Supplemental Data (`Tables_S1-S7/`)
+### 5. Supplemental Data (`Tables_S1-S9/`)
 *   **Purpose**: Consolidated datasets supporting the manuscript's findings, including orthology mappings and cross-species splicing events.
 
 ---
@@ -43,8 +43,8 @@ This analysis integrates phylogenetic profiling, quantitative proteomics, and tr
 
 ## Contact & Citation
 
-**Authors**: Zhan, Papareddy et al.
+**Author**: Ranjith K. Papareddy
 
-[Citation details pending publication]
+**DOI**: https://doi.org/10.64898/2026.03.30.715226
 
 For technical inquiries regarding the pipelines, please refer to the README files within each specific sub-module directory.

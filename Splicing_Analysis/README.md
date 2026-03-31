@@ -154,7 +154,9 @@ Standalone scripts are provided in `src/` for custom analyses:
 
 If you use this pipeline in your research, please cite:
 
-[Citation information pending publication]
+**Author**: Ranjith K. Papareddy
+
+**DOI**: https://doi.org/10.64898/2026.03.30.715226
 
 ---
 
